@@ -145,7 +145,7 @@
     $('#btn-today').hidden = S.date === S.today;
     const main = $('#main');
     const banner = S.data.sample
-      ? `<div class="banner"><p><b>You're looking at example data.</b> Ten weeks of sample meals show how the ledger works. Your own log starts when you clear them.</p><div class="row"><button class="btn primary" data-action="start-own">Start my own log</button></div></div>`
+      ? `<div class="banner"><p><b>You're looking at example data.</b> Ten weeks of sample meals show how the app works. Your own log starts when you clear them.</p><div class="row"><button class="btn primary" data-action="start-own">Start my own log</button></div></div>`
       : '';
     const views = { today: renderToday, trends: renderTrends, foods: renderFoods, settings: renderSettings };
     main.innerHTML = banner + views[S.tab]();

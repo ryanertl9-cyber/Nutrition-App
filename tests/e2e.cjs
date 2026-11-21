@@ -8,6 +8,8 @@ const assert = require('node:assert/strict');
 
 const ROOT = path.join(__dirname, '..');
 const SHOTS = process.env.SHOTS_DIR || '';
+// Same Content-Security-Policy the live site sends (netlify.toml), so blocked requests fail here too.
+const CSP = fs.readFileSync(path.join(ROOT, 'netlify.toml'), 'utf8').match(/Content-Security-Policy = "([^"]+)"/)[1];
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css' };
 
 function serve() {
@@ -15,7 +17,7 @@ function serve() {
     const p = path.join(ROOT, decodeURIComponent(new URL(req.url, 'http://x').pathname));
     const file = p.endsWith('/') ? path.join(p, 'index.html') : p;
     if (!file.startsWith(ROOT) || !fs.existsSync(file)) { res.writeHead(404); res.end(); return; }
-    res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream' });
+    res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream', 'content-security-policy': CSP });
     fs.createReadStream(file).pipe(res);
   });
   return new Promise((r) => srv.listen(0, () => r(srv)));
@@ -32,6 +34,8 @@ async function step(name, fn) {
   const browser = await chromium.launch();
   const errors = [];
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  // This suite covers on-device (guest) mode, as in the claude.ai version: no account backend.
+  await ctx.route('**/src/config.js', (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.NL_CONFIG = null;' }));
   // Online search is not reachable in CI: answer it with a canned USDA response.
   await ctx.route('https://api.nal.usda.gov/**', (route) => route.fulfill({
     status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
@@ -241,6 +245,7 @@ async function step(name, fn) {
 
   // Phone layout + dark theme
   const phone = await browser.newContext(Object.assign({}, devices['iPhone 13'], { colorScheme: 'dark' }));
+  await phone.route('**/src/config.js', (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.NL_CONFIG = null;' }));
   const p2 = await phone.newPage();
   const errors2 = [];
   p2.on('pageerror', (e) => errors2.push(e.message));

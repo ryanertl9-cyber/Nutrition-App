@@ -6,10 +6,11 @@
   "license": "MIT",
   "scripts": {
     "start": "npx serve .",
-    "test": "node --test tests/core.test.cjs",
+    "test": "node --test tests/core.test.cjs tests/sync.test.cjs",
     "test:e2e": "node tests/e2e.cjs",
     "build:data": "node scripts/build-foods.mjs",
-    "build:artifact": "node scripts/build-artifact.mjs"
+    "build:artifact": "node scripts/build-artifact.mjs",
+    "test:accounts": "node tests/e2e-accounts.cjs"
   },
   "devDependencies": {
     "playwright": "^1.48.0"

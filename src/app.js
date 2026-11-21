@@ -31,16 +31,28 @@
   // ---------------------------------------------------------------------------
   // Storage (browser only; wrapped because storage can be blocked)
   // ---------------------------------------------------------------------------
-  function load() {
-    try {
-      const raw = window.localStorage.getItem(STORE_KEY);
-      if (raw) return JSON.parse(raw);
-    } catch (e) { /* storage unavailable */ }
-    return memStore.data || null;
+  // Guests keep one local copy; each signed-in account gets its own local copy plus sync bookkeeping.
+  const ACCT_PREFIX = 'nutrient-ledger:acct:';
+  const META_PREFIX = 'nutrient-ledger:sync:';
+  function storeKey() { return S.user ? ACCT_PREFIX + S.user.id : STORE_KEY; }
+  function readKey(k) {
+    if (memStore[k]) return memStore[k];
+    try { const raw = window.localStorage.getItem(k); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
   }
+  function writeKey(k, v) { memStore[k] = v; try { window.localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* keep in memory */ } }
+  function removeKey(k) { delete memStore[k]; try { window.localStorage.removeItem(k); } catch (e) { /* ignore */ } }
+  function load() { return readKey(storeKey()); }
   function save() {
-    memStore.data = S.data;
-    try { window.localStorage.setItem(STORE_KEY, JSON.stringify(S.data)); } catch (e) { /* keep in memory */ }
+    writeKey(storeKey(), S.data);
+    if (Acct.engine) Acct.engine.schedule();
+  }
+  function normalize(d) {
+    d.settings = Object.assign({ apiKey: '', units: 'us' }, d.settings || {});
+    d.overrides = d.overrides || {};
+    d.myFoods = d.myFoods || [];
+    d.entries = d.entries || [];
+    d.profile = Object.assign({}, NL.DEFAULT_PROFILE, d.profile || {});
+    return d;
   }
   function freshData(withSample) {
     return {
@@ -137,6 +149,7 @@
       : '';
     const views = { today: renderToday, trends: renderTrends, foods: renderFoods, settings: renderSettings };
     main.innerHTML = banner + views[S.tab]();
+    renderAccountButton();
     renderSheet();
   }
 
@@ -487,12 +500,15 @@
         </section>
         <section class="card">
           <h2 style="margin-bottom:8px">Your data</h2>
-          <p class="small muted" style="margin-top:0">Everything is stored in this browser on this device: ${S.data.entries.length.toLocaleString('en-US')} entries, ${S.data.myFoods.length} saved foods. Export a backup to move it to another device.</p>
+          ${S.user
+            ? `<p class="small muted" style="margin-top:0">Saved to your account (<b>${esc(S.user.email)}</b>) and synced across your devices: ${S.data.entries.filter((e) => !e.sample).length.toLocaleString('en-US')} entries, ${S.data.myFoods.length} saved foods.</p>`
+            : `<p class="small muted" style="margin-top:0">Stored only in this browser on this device: ${S.data.entries.length.toLocaleString('en-US')} entries, ${S.data.myFoods.length} saved foods.${Acct.available ? ' Create a free account to keep it safe and use it on your other devices.' : ' Export a backup to move it to another device.'}</p>
+               ${Acct.available ? `<div class="row" style="margin-bottom:10px"><button class="btn primary" data-action="auth-open" data-mode="signup">Create a free account</button><button class="btn" data-action="auth-open" data-mode="signin">Sign in</button></div>` : ''}`}
           <div class="row">
             <button class="btn" data-action="export">Export backup (.json)</button>
             <label class="btn" for="import-file">Import backup</label><input id="import-file" type="file" accept=".json,application/json" hidden>
-            ${S.data.sample ? `<button class="btn" data-action="start-own">Remove example data</button>` : `<button class="btn" data-action="load-sample">Load example data</button>`}
-            <button class="btn danger" data-action="erase">${eraseConfirm ? 'Tap again to erase everything' : 'Erase all data'}</button>
+            ${S.data.sample ? `<button class="btn" data-action="start-own">Remove example data</button>` : S.user ? '' : `<button class="btn" data-action="load-sample">Load example data</button>`}
+            <button class="btn danger" data-action="erase">${eraseConfirm ? (S.user ? 'Tap again: this erases your log on every device' : 'Tap again to erase everything') : (S.user ? 'Erase my log' : 'Erase all data')}</button>
           </div>
         </section>
       </div>
@@ -507,12 +523,15 @@
   // Sheets: add food, nutrient detail, custom food, recipe
   // ---------------------------------------------------------------------------
   function openSheet(sheet) { S.sheet = sheet; renderSheet(); setTimeout(() => { const f = document.querySelector('#sheet-root [data-autofocus]'); if (f) f.focus(); }, 30); }
-  function closeSheet() { S.sheet = null; renderSheet(); }
+  function closeSheet() {
+    S.sheet = null;
+    if (S.dirtyRender) { S.dirtyRender = false; render(); } else renderSheet();
+  }
   function renderSheet() {
     const root = $('#sheet-root');
     if (!S.sheet) { root.innerHTML = ''; document.body.style.overflow = ''; return; }
     const sh = S.sheet;
-    const map = { add: sheetAdd, detail: sheetDetail, custom: sheetCustom, recipe: sheetRecipe };
+    const map = { add: sheetAdd, detail: sheetDetail, custom: sheetCustom, recipe: sheetRecipe, auth: sheetAuth, account: sheetAccount, import: sheetImport };
     const { title, body } = map[sh.type]();
     root.innerHTML = `<div class="scrim" data-action="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
       <div class="sheet-head"><h2 id="sheet-title">${title}</h2><button class="btn ghost icon" data-action="close-sheet" aria-label="Close">✕</button></div>
@@ -839,7 +858,7 @@
       try {
         const d = JSON.parse(reader.result);
         if (!d || !Array.isArray(d.entries) || !d.profile) throw new Error('shape');
-        S.data = Object.assign(freshData(false), d, { settings: Object.assign({ apiKey: '', units: 'us' }, d.settings || {}) });
+        S.data = normalize(Object.assign(freshData(false), d));
         toast(`Imported ${d.entries.length.toLocaleString('en-US')} entries`);
         commit();
       } catch (e) { toast('That file isn\'t a Nutrient Ledger backup.'); }
@@ -877,7 +896,9 @@
         S.data.sample = true; toast('Example data added'); commit(); return;
       case 'erase':
         if (S.confirm !== 'erase') { S.confirm = 'erase'; render(); return; }
-        S.confirm = null; S.data = freshData(false); toast('All data erased'); commit(); return;
+        S.confirm = null;
+        if (S.user) { S.data.entries = []; S.data.myFoods = []; toast('Your log was erased'); } else { S.data = freshData(false); toast('All data erased'); }
+        commit(); return;
       case 'export': exportData(); return;
       case 'units': S.data.settings.units = a.dataset.units; commit(); return;
       case 'reset-target': delete S.data.overrides[a.dataset.key]; commit(); return;
@@ -979,6 +1000,7 @@
         toast('Deleted'); commit(); return;
       }
       default:
+        accountAction(act, a);
     }
   });
 
@@ -1073,6 +1095,369 @@
   }, 60000);
 
   // ---------------------------------------------------------------------------
+  // Accounts (Supabase email + password) and sync. Only active when config.js and
+  // the Supabase library are loaded; otherwise the app runs in on-device mode.
+  // ---------------------------------------------------------------------------
+  const CFG = window.NL_CONFIG || null;
+  const FULL_SITE = (CFG && CFG.siteUrl) || 'https://nutrition-app-c6ea.netlify.app/';
+  const LEGAL_BASE = CFG ? '' : FULL_SITE;
+  const Acct = { client: null, engine: null, available: false, status: { state: 'idle', lastSynced: null }, importOffered: false };
+
+  function initAccounts() {
+    if (!CFG || !CFG.supabaseUrl || !CFG.supabaseKey || !window.supabase || !window.NLSync) { renderAccountButton(); return; }
+    try {
+      Acct.client = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey, {
+        auth: { flowType: 'implicit', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+      });
+    } catch (e) { renderAccountButton(); return; }
+    Acct.available = true;
+    // Supabase advises not to call its API inside this callback directly, so defer.
+    Acct.client.auth.onAuthStateChange((event, session) => { setTimeout(() => handleAuth(event, session), 0); });
+    window.addEventListener('online', () => { if (Acct.engine) Acct.engine.schedule(0); });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Acct.engine) Acct.engine.schedule(0); });
+    setInterval(() => { if (Acct.engine && document.visibilityState === 'visible') Acct.engine.schedule(0); }, 60000);
+    renderAccountButton();
+    render();
+  }
+
+  async function handleAuth(event, session) {
+    const user = session && session.user;
+    if (user && (!S.user || S.user.id !== user.id)) enterAccount(user);
+    else if (!user && S.user) leaveAccount();
+    else if (user) { S.user.email = user.email; renderAccountButton(); }
+    if (event === 'PASSWORD_RECOVERY') openSheet({ type: 'auth', mode: 'newpass', error: '', busy: false });
+  }
+
+  function enterAccount(user) {
+    if (Acct.engine) Acct.engine.stop();
+    S.user = { id: user.id, email: user.email };
+    const existing = load();
+    S.data = normalize(existing || freshData(false));
+    S.data.sample = false;
+    const uidKey = META_PREFIX + user.id;
+    Acct.engine = new window.NLSync.SyncEngine(window.NLSync.supabaseRemote(Acct.client, user.id), {
+      getData: () => S.data,
+      getMeta: () => readKey(uidKey) || window.NLSync.emptyMeta(),
+      saveMeta: (m) => writeKey(uidKey, m),
+      onRemoteChange: () => {
+        writeKey(storeKey(), S.data);
+        reindex();
+        if (S.sheet) S.dirtyRender = true; else render();
+      },
+      onStatus: (st) => {
+        Acct.status = st;
+        renderAccountButton();
+        if (S.sheet && S.sheet.type === 'account') renderSheet();
+      },
+    });
+    if (S.sheet && S.sheet.type === 'auth') S.sheet = null;
+    reindex();
+    render();
+    const guest = readKey(STORE_KEY);
+    const gEntries = guest ? (guest.entries || []).filter((e) => !e.sample) : [];
+    const gFoods = guest ? guest.myFoods || [] : [];
+    if (!existing && (gEntries.length || gFoods.length)) {
+      openSheet({ type: 'import', entries: gEntries.length, foods: gFoods.length });
+    } else {
+      firstSync(false);
+    }
+  }
+
+  function firstSync(imported) {
+    if (!Acct.engine) return;
+    Acct.engine.sync().then((r) => {
+      if (r && r.firstSync && !r.remoteProfileFound && !imported) {
+        S.tab = 'settings';
+        render();
+        toast('Welcome! Set up your profile so your targets fit you.');
+      }
+    }).catch(() => { /* status shows the error */ });
+  }
+
+  function importGuestData() {
+    const guest = normalize(readKey(STORE_KEY) || freshData(false));
+    const have = new Set(S.data.entries.map((e) => e.id));
+    for (const e of guest.entries) if (!e.sample && !have.has(e.id)) S.data.entries.push(Object.assign({}, e));
+    const haveF = new Set(S.data.myFoods.map((f) => f.id));
+    for (const f of guest.myFoods) if (!haveF.has(f.id)) S.data.myFoods.push(f);
+    S.data.profile = guest.profile;
+    S.data.overrides = guest.overrides;
+    S.data.settings = Object.assign({}, S.data.settings, { units: guest.settings.units, apiKey: guest.settings.apiKey || S.data.settings.apiKey });
+    // The guest copy now lives in the account; leave a clean on-device log behind.
+    writeKey(STORE_KEY, freshData(false));
+    writeKey(storeKey(), S.data);
+    reindex();
+  }
+
+  function leaveAccount() {
+    if (Acct.engine) Acct.engine.stop();
+    Acct.engine = null;
+    Acct.status = { state: 'idle', lastSynced: null };
+    S.user = null;
+    S.data = normalize(load() || freshData(true));
+    S.sheet = null;
+    reindex();
+    render();
+  }
+
+  function forgetAccountOnDevice(id) { removeKey(ACCT_PREFIX + id); removeKey(META_PREFIX + id); }
+
+  function syncLine() {
+    const st = Acct.status;
+    const meta = S.user ? readKey(META_PREFIX + S.user.id) : null;
+    const pending = meta ? window.NLSync.pendingCount(S.data, meta) : 0;
+    const when = st.lastSynced ? new Date(st.lastSynced).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null;
+    if (st.state === 'syncing') return { tone: 'near', text: 'Syncing…' };
+    if (st.state === 'offline') return { tone: 'near', text: `You're offline. ${pending || 'Your'} change${pending === 1 ? '' : 's'} will sync when you reconnect.` };
+    if (st.state === 'error') return { tone: 'low', text: `Couldn't reach your account (${st.error}). Changes are kept on this device and will retry.` };
+    if (pending) return { tone: 'near', text: `${pending} change${pending === 1 ? '' : 's'} waiting to sync.` };
+    return { tone: 'met', text: when ? `All changes saved to your account · last synced ${when}` : 'Connected to your account.' };
+  }
+
+  function renderAccountButton() {
+    const el = $('#account-slot');
+    if (!el) return;
+    if (!Acct.available) {
+      el.innerHTML = CFG ? '' : `<a class="btn small" href="${esc(FULL_SITE)}" target="_blank" rel="noopener">Accounts &amp; sync ↗</a>`;
+      return;
+    }
+    if (!S.user) { el.innerHTML = `<button class="btn small primary" data-action="auth-open" data-mode="signin">Sign in</button>`; return; }
+    const line = syncLine();
+    el.innerHTML = `<button class="btn small" data-action="account-open" title="${esc(line.text)}"><span class="dot s-${line.tone}" aria-hidden="true"></span><span class="acct-email">${esc(S.user.email)}</span></button>`;
+  }
+
+  function authMessage(err) {
+    const m = String((err && (err.message || err.error_description)) || err || '');
+    if (/invalid login credentials/i.test(m)) return 'That email and password don\'t match an account. Check them, or reset your password.';
+    if (/email not confirmed/i.test(m)) return 'Confirm your email first: open the link we sent you. You can resend it below.';
+    if (/already registered|already been registered|user already exists/i.test(m)) return 'An account with that email already exists. Sign in instead.';
+    if (/password.*(at least|short|weak)|weak password/i.test(m)) return 'Choose a stronger password: at least 8 characters, ideally a phrase.';
+    if (/rate limit|too many|security purposes/i.test(m)) return 'Too many attempts. Wait a minute and try again.';
+    if (/failed to fetch|network|load failed/i.test(m)) return 'Couldn\'t reach the account server. Check your connection and try again.';
+    if (/same.*password|different from the old/i.test(m)) return 'Choose a password different from your current one.';
+    return m || 'Something went wrong. Try again.';
+  }
+  const redirectUrl = () => window.location.origin + window.location.pathname;
+
+  function sheetAuth() {
+    const sh = S.sheet;
+    const err = `<p class="small" role="alert" data-auth-error style="color:var(--low);margin:0" ${sh.error ? '' : 'hidden'}>${esc(sh.error || '')}</p>`;
+    const legal = `<a href="${LEGAL_BASE}privacy.html" target="_blank" rel="noopener">Privacy Policy</a> and <a href="${LEGAL_BASE}terms.html" target="_blank" rel="noopener">Terms</a>`;
+    const email = (auto) => `<label class="field"><span>Email</span><input class="input" id="auth-email" type="email" autocomplete="username" required value="${esc(sh.email || '')}" ${auto ? 'data-autofocus' : ''}></label>`;
+    const busy = sh.busy ? 'disabled' : '';
+    if (sh.mode === 'signup') {
+      return { title: 'Create your account', body: `<form class="portion-pane" data-form="signup" novalidate>
+        <p class="small muted" style="margin:0">Free. Your log syncs across your devices and stays private to you.</p>
+        ${email(true)}
+        <label class="field"><span>Password (at least 8 characters)</span><input class="input" id="auth-password" type="password" autocomplete="new-password" minlength="8" required></label>
+        <label class="row small" style="flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" id="auth-agree" style="margin-top:3px"> <span>I agree to the ${legal}. Nutrient Ledger is a tracking tool, not medical advice.</span></label>
+        ${err}
+        <button class="btn primary" type="submit" ${busy}>${sh.busy ? 'Creating…' : 'Create account'}</button>
+        <p class="small muted" style="margin:0">Already have an account? <button type="button" class="btn ghost small" data-action="auth-mode" data-mode="signin">Sign in</button></p>
+      </form>` };
+    }
+    if (sh.mode === 'forgot') {
+      return { title: 'Reset your password', body: `<form class="portion-pane" data-form="forgot" novalidate>
+        <p class="small muted" style="margin:0">We'll email you a link to choose a new password.</p>
+        ${email(true)}${err}
+        <button class="btn primary" type="submit" ${busy}>${sh.busy ? 'Sending…' : 'Send reset link'}</button>
+        <p class="small muted" style="margin:0"><button type="button" class="btn ghost small" data-action="auth-mode" data-mode="signin">‹ Back to sign in</button></p>
+      </form>` };
+    }
+    if (sh.mode === 'check-email' || sh.mode === 'reset-sent') {
+      const reset = sh.mode === 'reset-sent';
+      return { title: 'Check your email', body: `<div class="portion-pane">
+        <p style="margin:0">${reset ? 'If an account exists for' : 'We sent a confirmation link to'} <b>${esc(sh.email)}</b>${reset ? ', we sent it a link to reset the password.' : '. Open it to finish creating your account; you can open it on any device.'}</p>
+        <p class="small muted" style="margin:0">It can take a minute. Check spam if it doesn't arrive.</p>
+        ${err}<p class="small s-met" data-auth-info style="margin:0" ${sh.info ? '' : 'hidden'}>${esc(sh.info || '')}</p>
+        <div class="row">${reset ? '' : `<button class="btn" data-action="auth-resend" ${busy}>Resend email</button>`}<button class="btn ghost" data-action="auth-mode" data-mode="signin">Back to sign in</button></div>
+      </div>` };
+    }
+    if (sh.mode === 'newpass') {
+      return { title: 'Choose a new password', body: `<form class="portion-pane" data-form="newpass" novalidate>
+        <label class="field"><span>New password (at least 8 characters)</span><input class="input" id="auth-password" type="password" autocomplete="new-password" minlength="8" required data-autofocus></label>
+        ${err}<button class="btn primary" type="submit" ${busy}>${sh.busy ? 'Saving…' : 'Save password'}</button>
+      </form>` };
+    }
+    return { title: 'Sign in', body: `<form class="portion-pane" data-form="signin" novalidate>
+      ${email(true)}
+      <label class="field"><span>Password</span><input class="input" id="auth-password" type="password" autocomplete="current-password" required></label>
+      ${err}
+      ${sh.unconfirmed ? `<button type="button" class="btn small" data-action="auth-resend">Resend confirmation email</button>` : ''}
+      <button class="btn primary" type="submit" ${busy}>${sh.busy ? 'Signing in…' : 'Sign in'}</button>
+      <div class="row small muted" style="justify-content:space-between"><button type="button" class="btn ghost small" data-action="auth-mode" data-mode="forgot">Forgot password?</button><span>New here? <button type="button" class="btn ghost small" data-action="auth-mode" data-mode="signup">Create an account</button></span></div>
+    </form>` };
+  }
+
+  function sheetAccount() {
+    const sh = S.sheet;
+    const line = syncLine();
+    const meta = readKey(META_PREFIX + S.user.id);
+    const pending = meta ? window.NLSync.pendingCount(S.data, meta) : 0;
+    const err = `<p class="small" role="alert" data-auth-error style="color:var(--low);margin:0" ${sh.error ? '' : 'hidden'}>${esc(sh.error || '')}</p>`;
+    return { title: 'Your account', body: `<div class="portion-pane">
+      <div><div class="eyebrow">Signed in as</div><b>${esc(S.user.email)}</b></div>
+      <p class="small" style="margin:0"><span class="dot s-${line.tone}"></span> ${esc(line.text)}</p>
+      <div class="row"><button class="btn" data-action="sync-now">Sync now</button></div>
+      <details ${sh.pwOpen ? 'open' : ''}><summary>Change password</summary>
+        <form class="row" data-form="changepw" style="margin-top:8px"><input class="input" id="acct-newpw" type="password" autocomplete="new-password" minlength="8" placeholder="New password (8+ characters)" style="flex:1 1 14em"><button class="btn" type="submit">Save</button></form>
+      </details>
+      ${err}<p class="small s-met" data-auth-info style="margin:0" ${sh.info ? '' : 'hidden'}>${esc(sh.info || '')}</p>
+      <div class="rule" style="height:1px;background:var(--line)"></div>
+      ${sh.confirmSignOut
+        ? `<p class="small" style="margin:0;color:var(--near)">${pending} change${pending === 1 ? ' hasn\'t' : 's haven\'t'} reached your account yet. Signing out now would lose ${pending === 1 ? 'it' : 'them'}.</p><div class="row"><button class="btn" data-action="sync-now">Try syncing first</button><button class="btn danger" data-action="sign-out" data-force="1">Sign out anyway</button></div>`
+        : `<div class="row"><button class="btn" data-action="sign-out">Sign out</button></div>`}
+      <p class="small muted" style="margin:0">Signing out removes your log from this device. It stays safe in your account.</p>
+      <details ${sh.deleteOpen ? 'open' : ''}><summary style="color:var(--low)">Delete account</summary>
+        <form class="portion-pane" data-form="delete" style="margin-top:8px">
+          <p class="small" style="margin:0">This permanently deletes your account and every entry, food and recipe in it, on all devices. Export a backup first (Profile → Your data) if you want a copy.</p>
+          <label class="field"><span>Type DELETE to confirm</span><input class="input" id="acct-delete" autocomplete="off"></label>
+          <button class="btn danger" type="submit" ${sh.busy ? 'disabled' : ''}>Delete my account</button>
+        </form>
+      </details>
+      <p class="small muted" style="margin:0"><a href="${LEGAL_BASE}privacy.html" target="_blank" rel="noopener">Privacy Policy</a> · <a href="${LEGAL_BASE}terms.html" target="_blank" rel="noopener">Terms</a></p>
+    </div>` };
+  }
+
+  function sheetImport() {
+    const sh = S.sheet;
+    return { title: 'Bring your log into your account?', body: `<div class="portion-pane">
+      <p style="margin:0">This device has <b>${sh.entries.toLocaleString('en-US')} logged ${sh.entries === 1 ? 'entry' : 'entries'}</b>${sh.foods ? ` and <b>${sh.foods} saved food${sh.foods === 1 ? '' : 's'}</b>` : ''} from before you signed in.</p>
+      <p class="small muted" style="margin:0">Adding them copies them into your account so they sync to your other devices. Your profile and targets from this device are used if the account doesn't have its own yet.</p>
+      <div class="row"><button class="btn primary" data-action="import-yes">Add to my account</button><button class="btn" data-action="import-no">Not now</button></div>
+    </div>` };
+  }
+
+  /** Update busy state and error text in place, so typed passwords and checkboxes are kept. */
+  function authBusy(on, error) {
+    if (!S.sheet) return;
+    S.sheet.busy = on;
+    if (error !== undefined) S.sheet.error = error;
+    const root = $('#sheet-root');
+    const errEl = root.querySelector('[data-auth-error]');
+    if (!errEl) { renderSheet(); return; }
+    errEl.textContent = S.sheet.error || '';
+    errEl.hidden = !S.sheet.error;
+    for (const b of root.querySelectorAll('button[type="submit"]')) b.disabled = on;
+    const info = root.querySelector('[data-auth-info]');
+    if (info) { info.textContent = S.sheet.info || ''; info.hidden = !S.sheet.info; }
+  }
+
+  async function submitAuth(form) {
+    const sh = S.sheet;
+    const val = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const auth = Acct.client.auth;
+    if (form === 'signin' || form === 'signup' || form === 'forgot') sh.email = val('auth-email').trim();
+    if ((form === 'signin' || form === 'signup' || form === 'forgot') && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(sh.email)) { authBusy(false, 'Enter a valid email address.'); return; }
+    try {
+      if (form === 'signin') {
+        authBusy(true, '');
+        const { error } = await auth.signInWithPassword({ email: sh.email, password: val('auth-password') });
+        if (error) {
+          const unconfirmed = /not confirmed/i.test(error.message);
+          if (unconfirmed !== !!sh.unconfirmed) { sh.unconfirmed = unconfirmed; sh.error = authMessage(error); sh.busy = false; renderSheet(); return; }
+          throw error;
+        }
+        toast('Signed in');
+      } else if (form === 'signup') {
+        const pw = val('auth-password');
+        if (pw.length < 8) { authBusy(false, 'Use at least 8 characters for your password.'); return; }
+        if (!document.getElementById('auth-agree').checked) { authBusy(false, 'Please agree to the Privacy Policy and Terms to create an account.'); return; }
+        authBusy(true, '');
+        const { data, error } = await auth.signUp({ email: sh.email, password: pw, options: { emailRedirectTo: redirectUrl() } });
+        if (error) throw error;
+        if (!data.session) { Object.assign(S.sheet, { mode: 'check-email', busy: false, error: '' }); renderSheet(); } else toast('Account created');
+      } else if (form === 'forgot') {
+        authBusy(true, '');
+        const { error } = await auth.resetPasswordForEmail(sh.email, { redirectTo: redirectUrl() });
+        if (error) throw error;
+        Object.assign(S.sheet, { mode: 'reset-sent', busy: false, error: '' }); renderSheet();
+      } else if (form === 'newpass') {
+        const pw = val('auth-password');
+        if (pw.length < 8) { authBusy(false, 'Use at least 8 characters for your password.'); return; }
+        authBusy(true, '');
+        const { error } = await auth.updateUser({ password: pw });
+        if (error) throw error;
+        closeSheet(); toast('Password updated');
+      } else if (form === 'changepw') {
+        const pw = val('acct-newpw');
+        sh.pwOpen = true;
+        if (pw.length < 8) { sh.info = ''; authBusy(false, 'Use at least 8 characters for your password.'); return; }
+        const { error } = await auth.updateUser({ password: pw });
+        if (error) throw error;
+        sh.info = 'Password changed.'; sh.pwOpen = false; document.getElementById('acct-newpw').value = ''; authBusy(false, '');
+      } else if (form === 'delete') {
+        sh.deleteOpen = true;
+        if (val('acct-delete').trim() !== 'DELETE') { authBusy(false, 'Type DELETE in capitals to confirm.'); return; }
+        authBusy(true, '');
+        const { error } = await Acct.client.rpc('delete_account');
+        if (error) throw error;
+        const id = S.user.id;
+        if (Acct.engine) Acct.engine.stop();
+        forgetAccountOnDevice(id);
+        await auth.signOut({ scope: 'local' }).catch(() => {});
+        leaveAccount();
+        toast('Your account and its data were deleted');
+      }
+    } catch (err) {
+      if (S.sheet) { S.sheet.info = ''; authBusy(false, authMessage(err)); }
+    }
+  }
+
+  async function accountAction(act, a) {
+    if (!Acct.available && act !== 'noop') return;
+    const sh = S.sheet;
+    switch (act) {
+      case 'auth-open': openSheet({ type: 'auth', mode: a.dataset.mode || 'signin', error: '', busy: false }); return;
+      case 'auth-mode': {
+        const emailEl = document.getElementById('auth-email');
+        openSheet({ type: 'auth', mode: a.dataset.mode, email: emailEl ? emailEl.value : sh && sh.email, error: '', busy: false });
+        return;
+      }
+      case 'auth-resend': {
+        const emailEl = document.getElementById('auth-email');
+        const email = (emailEl && emailEl.value.trim()) || sh.email;
+        try {
+          const { error } = await Acct.client.auth.resend({ type: 'signup', email, options: { emailRedirectTo: redirectUrl() } });
+          if (error) throw error;
+          sh.info = 'Sent. Check your inbox.'; authBusy(false, '');
+        } catch (err) { authBusy(false, authMessage(err)); }
+        return;
+      }
+      case 'account-open': openSheet({ type: 'account', error: '', info: '' }); return;
+      case 'sync-now':
+        if (Acct.engine) { sh.confirmSignOut = false; Acct.engine.sync().then(() => { if (S.sheet && S.sheet.type === 'account') renderSheet(); }).catch(() => {}); }
+        return;
+      case 'sign-out': {
+        const id = S.user.id;
+        const meta = readKey(META_PREFIX + id);
+        const pending = meta ? window.NLSync.pendingCount(S.data, meta) : 0;
+        if (pending && !a.dataset.force) {
+          try { await Acct.engine.sync(); } catch (e) { /* fall through */ }
+          const left = window.NLSync.pendingCount(S.data, readKey(META_PREFIX + id) || meta);
+          if (left) { sh.confirmSignOut = true; renderSheet(); return; }
+        }
+        if (Acct.engine) Acct.engine.stop();
+        forgetAccountOnDevice(id);
+        await Acct.client.auth.signOut({ scope: 'local' }).catch(() => {});
+        if (S.user) leaveAccount();
+        toast('Signed out');
+        return;
+      }
+      case 'import-yes': importGuestData(); S.sheet = null; render(); firstSync(true); toast('Added to your account'); return;
+      case 'import-no': closeSheet(); firstSync(false); return;
+      default:
+    }
+  }
+
+  document.addEventListener('submit', (ev) => {
+    const form = ev.target.closest('form[data-form]');
+    if (!form) return;
+    ev.preventDefault();
+    if (Acct.available) submitAuth(form.dataset.form);
+  });
+
+  // ---------------------------------------------------------------------------
   // Boot
   // ---------------------------------------------------------------------------
   async function boot() {
@@ -1084,14 +1469,12 @@
       $('#main').innerHTML = `<div class="card"><h2>The food database didn't load</h2><p>${esc(e.message)}. Reload the page to try again. If you opened index.html straight from your disk, serve the folder instead (for example <code>npx serve .</code>), because browsers block local file reads.</p></div>`;
       return;
     }
-    S.data = load() || freshData(true);
-    S.data.settings = Object.assign({ apiKey: '', units: 'us' }, S.data.settings || {});
-    S.data.overrides = S.data.overrides || {};
-    S.data.myFoods = S.data.myFoods || [];
+    S.data = normalize(load() || freshData(true));
     save();
     reindex();
     render();
+    initAccounts();
   }
-  window.NutrientLedger = { state: S, get db() { return db; } };
+  window.NutrientLedger = { state: S, get db() { return db; }, get account() { return Acct; } };
   boot();
 })();

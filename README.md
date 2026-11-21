@@ -7,7 +7,8 @@ A nutrition tracker that shows at a glance which of your daily nutrient targets 
 - **Target map.** A heatmap of every nutrient by day (or week), with a days-on-target ranking and plain-language insights.
 - **Fast logging.** Type "2 eggs, 1 cup oatmeal and a banana". Re-add recent foods in one tap, copy yesterday's meal, and save recipes and custom foods.
 - **Trustworthy data.** Lab-analysed USDA values (SR28, 8,789 foods), with optional live search of USDA FoodData Central. Unknown values are flagged, never counted as zero.
-- **Private.** Your log stays in your browser, with JSON export and import.
+- **Accounts and sync.** Use it as a guest (data stays in the browser) or create a free account (email and password) to sync your log across devices. Accounts run on Supabase with row-level security, so each person can only read their own data.
+- **Private.** No ads, no trackers. Export or delete everything at any time.
 
 The background research (MyFitnessPal, Cronometer, MacroFactor, retention studies) is in [`docs/RESEARCH.md`](docs/RESEARCH.md). The filled-in design brief is in [`docs/DESIGN-PROMPT.md`](docs/DESIGN-PROMPT.md).
 
@@ -21,6 +22,15 @@ npx serve .
 
 Then open the printed URL. Any static host works, including GitHub Pages (Settings → Pages → deploy from the `main` branch root).
 
+## Accounts setup (Supabase + Netlify)
+
+1. **Database.** In the Supabase dashboard, open SQL Editor → New query, paste [`supabase/schema.sql`](supabase/schema.sql), and click Run. This creates the `profiles`, `entries` and `foods` tables, locks each row to its owner (row-level security) and adds the `delete_account()` function. It's safe to run again.
+2. **Auth URLs.** In Authentication → URL Configuration, set **Site URL** to the live site (`https://nutrition-app-c6ea.netlify.app`) and add it under **Redirect URLs**. Confirmation and password-reset emails link there.
+3. **Email.** Supabase's built-in email sender only allows a few messages per hour. Before inviting people, add an SMTP provider (for example Resend) under Authentication → Emails → SMTP settings.
+4. **Config.** [`src/config.js`](src/config.js) holds the project URL and the *publishable* key. These are meant to be public. Never put the secret (service_role) key in this repository.
+
+Guests who sign in are offered to copy their on-device log into the account. Sync is local-first: every change saves on the device immediately and uploads in the background, so the app keeps working offline.
+
 ## Test it
 
 ```bash
@@ -31,7 +41,11 @@ npm test
 npm run test:e2e
 ```
 
-`npm test` runs 23 unit tests for the core logic (`node --test`). `npm run test:e2e` runs 27 browser checks with Playwright. They cover logging, editing, recipes, custom foods, online search (mocked), trends, export and import, reload persistence, phone layout and dark mode.
+```bash
+npm run test:accounts
+```
+
+`npm test` runs 35 unit tests for the core logic and the sync engine (`node --test`). `npm run test:e2e` runs 27 browser checks of guest mode with Playwright: logging, editing, recipes, custom foods, online search (mocked), trends, export and import, reload persistence, phone layout and dark mode. `npm run test:accounts` runs 17 browser checks of accounts against a fake Supabase: sign-up, email confirmation, guest import, two-device sync, offline recovery, isolation between users, sign-out, password reset and account deletion. Both browser suites send the same Content-Security-Policy as the live site.
 
 ## How it works
 
@@ -77,14 +91,22 @@ MyFood    Food + { kind: 'custom' | 'recipe' | 'usda', servings?, ingredients?, 
 Settings  { apiKey, units: 'us' | 'metric' }
 ```
 
-Everything is stored under one `localStorage` key (`nutrient-ledger:v1`). The export file is the same JSON.
+Guests' data is stored under one `localStorage` key (`nutrient-ledger:v1`). Each signed-in account has its own local copy (`nutrient-ledger:acct:<user id>`) plus sync bookkeeping (`nutrient-ledger:sync:<user id>`), both removed on sign-out. The export file is the same JSON.
+
+On the server, each record is a row with `user_id`, `id`, a `data` JSON column, a `deleted` flag (so deletions reach other devices) and `server_updated_at` (set by the database, used for incremental pulls). Unsynced local edits win over older server copies. Example data and the USDA API key never leave the device.
 
 ## Architecture
 
 ```text
 index.html          markup shell + CSS (light/dark tokens)
 src/core.js         pure logic: nutrients, DRIs, targets, status, search, parser, trends, insights, FDC mapping
-src/app.js          UI: rendering, events, sheets, storage, export/import
+src/app.js          UI: rendering, events, sheets, storage, export/import, accounts
+src/sync.js         local-first sync engine (diff, pull/merge, batched push) + Supabase adapter
+src/config.js       public Supabase settings for the hosted site
+src/vendor/         supabase-js 2.119.0 (MIT), served from the site itself
+supabase/schema.sql tables, row-level security and delete_account()
+privacy.html, terms.html  legal pages (review before launch)
+netlify.toml        hosting config and security headers
 data/foods.json     USDA SR28 compiled by scripts/build-foods.mjs from vendor/sr28/*.txt
 tests/              node:test unit tests + Playwright end-to-end script
 scripts/            build-foods.mjs (data), build-artifact.mjs (claude.ai Artifact page)
@@ -97,15 +119,15 @@ There are no runtime dependencies. Online search calls `api.nal.usda.gov/fdc/v1/
 | | Features |
 |---|---|
 | **MVP (this release)** | Profile-based DRI targets, overrides, scoreboard, gap closer, natural-language entry, search, recent, copy meal, custom foods, recipes, online USDA search, target map, insights, charts, export/import, light and dark themes. |
-| **v2** | Barcode scanning via Open Food Facts, weight log with adaptive energy target, an optional AI parser for messy text and photos, highlighted-nutrient picker, more nutrients (omega-3, iodine) via FoodData Central Foundation Foods. |
-| **Future** | Encrypted cloud sync, clinician share view, pregnancy and lactation DRIs, meal planning toward gaps, reminders. |
+| **v2** | Sign in with Google/Apple, barcode scanning via Open Food Facts, weight log with adaptive energy target, an optional AI parser for messy text and photos, highlighted-nutrient picker, more nutrients (omega-3, iodine) via FoodData Central Foundation Foods. |
+| **Future** | Clinician share view, pregnancy and lactation DRIs, meal planning toward gaps, reminders. |
 
 ## Risks and open questions
 
 - **Data age.** SR28 dates from 2015. FoodData Central Foundation Foods is newer but covers fewer foods. A future build could merge the two.
 - **Upper limits.** Several ULs (magnesium, niacin, folate, vitamin E, preformed vitamin A) apply only to supplements or fortificants, so they are not flagged from food. Supplement logging would need them.
 - **Parser limits.** Dish names that contain "and" or "with" (such as "mac and cheese") split into separate items. The preview lets you fix them before adding.
-- **Storage.** Data is per device. Clearing site data erases the log unless it was exported.
+- **Storage.** Guest data is per device, and clearing site data erases it unless exported. Account data lives in Supabase; the free tier pauses after a week without traffic and has no automatic backups.
 - **Not medical advice.** Targets are population reference values.
 
 ## Data and licenses

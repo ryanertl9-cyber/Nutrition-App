@@ -60,6 +60,7 @@ async function until(fn, ms = 20000) {
     await page.click('[data-action="auth-open"]');
     await page.click('[data-action="auth-mode"][data-mode="signup"]');
     await page.fill('#auth-email', email);
+    await page.fill('#auth-email2', email);
     await page.fill('#auth-password', pw);
     await page.check('#auth-agree');
     await page.click('form[data-form="signup"] button[type="submit"]');

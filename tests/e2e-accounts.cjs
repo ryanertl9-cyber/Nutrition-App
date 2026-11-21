@@ -81,6 +81,11 @@ async function until(fn, ms = 8000) {
     await p1.click('[data-action="auth-open"][data-mode="signin"]');
     await p1.click('[data-action="auth-mode"][data-mode="signup"]');
     await p1.fill('#auth-email', A);
+    await p1.fill('#auth-email2', 'ana@exmaple.com');
+    await p1.fill('#auth-password', 'correct horse 1');
+    await p1.click('form[data-form="signup"] button[type="submit"]');
+    assert.match(await p1.textContent('[role="alert"]'), /don't match/);
+    await p1.fill('#auth-email2', A.toUpperCase()); // case doesn't matter
     await p1.fill('#auth-password', 'short');
     await p1.click('form[data-form="signup"] button[type="submit"]');
     assert.match(await p1.textContent('[role="alert"]'), /8 characters/);
@@ -200,6 +205,7 @@ async function until(fn, ms = 8000) {
     await p3.click('[data-action="auth-open"][data-mode="signin"]');
     await p3.click('[data-action="auth-mode"][data-mode="signup"]');
     await p3.fill('#auth-email', B);
+    await p3.fill('#auth-email2', B);
     await p3.fill('#auth-password', 'another good pw');
     await p3.check('#auth-agree');
     await p3.click('form[data-form="signup"] button[type="submit"]');

@@ -1249,6 +1249,7 @@
       return { title: 'Create your account', body: `<form class="portion-pane" data-form="signup" novalidate>
         <p class="small muted" style="margin:0">Free. Your log syncs across your devices and stays private to you.</p>
         ${email(true)}
+        <label class="field"><span>Confirm email</span><input class="input" id="auth-email2" type="email" autocomplete="off" required></label>
         <label class="field"><span>Password (at least 8 characters)</span><input class="input" id="auth-password" type="password" autocomplete="new-password" minlength="8" required></label>
         <label class="row small" style="flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" id="auth-agree" style="margin-top:3px"> <span>I agree to the ${legal}. Nutrient Ledger is a tracking tool, not medical advice.</span></label>
         ${err}
@@ -1360,6 +1361,7 @@
         }
         toast('Signed in');
       } else if (form === 'signup') {
+        if (val('auth-email2').trim().toLowerCase() !== sh.email.toLowerCase()) { authBusy(false, 'The two email addresses don\'t match. Check for typos: this is where password resets are sent.'); return; }
         const pw = val('auth-password');
         if (pw.length < 8) { authBusy(false, 'Use at least 8 characters for your password.'); return; }
         if (!document.getElementById('auth-agree').checked) { authBusy(false, 'Please agree to the Privacy Policy and Terms to create an account.'); return; }

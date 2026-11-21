@@ -1,4 +1,4 @@
--- Nutrient Ledger: database setup for Supabase.
+-- Simply Nutrition: database setup for Supabase.
 -- Run once in the Supabase dashboard: SQL Editor → New query → paste this file → Run.
 -- Safe to re-run: every statement is idempotent.
 

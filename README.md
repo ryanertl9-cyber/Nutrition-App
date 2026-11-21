@@ -1,4 +1,4 @@
-# Nutrient Ledger
+# Simply Nutrition
 
 A nutrition tracker that shows at a glance which of your daily nutrient targets you've hit and which you've missed. It covers calories, macros, 13 vitamins, 9 minerals and dietary limits, and tracks the pattern over weeks and months.
 
@@ -25,7 +25,7 @@ Then open the printed URL. Any static host works, including GitHub Pages (Settin
 ## Accounts setup (Supabase + Netlify)
 
 1. **Database.** In the Supabase dashboard, open SQL Editor → New query, paste [`supabase/schema.sql`](supabase/schema.sql), and click Run. This creates the `profiles`, `entries` and `foods` tables, locks each row to its owner (row-level security) and adds the `delete_account()` function. It's safe to run again.
-2. **Auth URLs.** In Authentication → URL Configuration, set **Site URL** to the live site (`https://simplynutrition.netlify.app`) and add it under **Redirect URLs**. Confirmation and password-reset emails link there.
+2. **Auth URLs.** In Authentication → URL Configuration, set **Site URL** to the live site (`https://simplynutrition.app`) and add it under **Redirect URLs** (keep `https://simplynutrition.netlify.app` there too for old links). Confirmation and password-reset emails link there.
 3. **Email.** Supabase's built-in email sender only allows a few messages per hour. Before inviting people, add an SMTP provider (for example Resend) under Authentication → Emails → SMTP settings.
 4. **Config.** [`src/config.js`](src/config.js) holds the project URL and the *publishable* key. These are meant to be public. Never put the secret (service_role) key in this repository.
 

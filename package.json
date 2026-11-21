@@ -1,5 +1,5 @@
 {
-  "name": "nutrient-ledger",
+  "name": "simply-nutrition",
   "version": "1.0.0",
   "description": "Nutrition tracker that shows which macro and micronutrient targets you hit or miss, day by day and over months.",
   "private": true,

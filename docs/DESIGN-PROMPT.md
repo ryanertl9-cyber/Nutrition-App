@@ -1,6 +1,6 @@
 # Design prompt (filled skeleton)
 
-This is the skeleton from the first request, filled in from the research in `RESEARCH.md` and the decisions made with the user. It is the brief the Nutrient Ledger app was built to.
+This is the skeleton from the first request, filled in from the research in `RESEARCH.md` and the decisions made with the user. It is the brief the Simply Nutrition app was built to.
 
 ---
 

@@ -1,4 +1,4 @@
-/* Nutrient Ledger: UI. Depends on core.js (window.NL). Plain JS, no framework. */
+/* Simply Nutrition: UI. Depends on core.js (window.NL). Plain JS, no framework. */
 (function () {
   'use strict';
   const NL = window.NL;
@@ -838,7 +838,7 @@
   // ---------------------------------------------------------------------------
   async function exportData() {
     const json = JSON.stringify(S.data, null, 1);
-    const filename = `nutrient-ledger-${S.today}.json`;
+    const filename = `simply-nutrition-${S.today}.json`;
     const dl = await downloadsP;
     if (dl) {
       try { await dl.save({ filename, data: json }); toast('Backup saved'); } catch (e) { if (e && e.code !== 'declined') toast('Couldn\'t save the backup here.'); }
@@ -861,7 +861,7 @@
         S.data = normalize(Object.assign(freshData(false), d));
         toast(`Imported ${d.entries.length.toLocaleString('en-US')} entries`);
         commit();
-      } catch (e) { toast('That file isn\'t a Nutrient Ledger backup.'); }
+      } catch (e) { toast('That file isn\'t a Simply Nutrition backup.'); }
     };
     reader.readAsText(file);
   }
@@ -1099,7 +1099,7 @@
   // the Supabase library are loaded; otherwise the app runs in on-device mode.
   // ---------------------------------------------------------------------------
   const CFG = window.NL_CONFIG || null;
-  const FULL_SITE = (CFG && CFG.siteUrl) || 'https://simplynutrition.netlify.app/';
+  const FULL_SITE = (CFG && CFG.siteUrl) || 'https://simplynutrition.app/';
   const LEGAL_BASE = CFG ? '' : FULL_SITE;
   const Acct = { client: null, engine: null, available: false, status: { state: 'idle', lastSynced: null }, importOffered: false };
 
@@ -1251,7 +1251,7 @@
         ${email(true)}
         <label class="field"><span>Confirm email</span><input class="input" id="auth-email2" type="email" autocomplete="off" required></label>
         <label class="field"><span>Password (at least 8 characters)</span><input class="input" id="auth-password" type="password" autocomplete="new-password" minlength="8" required></label>
-        <label class="row small" style="flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" id="auth-agree" style="margin-top:3px"> <span>I agree to the ${legal}. Nutrient Ledger is a tracking tool, not medical advice.</span></label>
+        <label class="row small" style="flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" id="auth-agree" style="margin-top:3px"> <span>I agree to the ${legal}. Simply Nutrition is a tracking tool, not medical advice.</span></label>
         ${err}
         <button class="btn primary" type="submit" ${busy}>${sh.busy ? 'Creating…' : 'Create account'}</button>
         <p class="small muted" style="margin:0">Already have an account? <button type="button" class="btn ghost small" data-action="auth-mode" data-mode="signin">Sign in</button></p>

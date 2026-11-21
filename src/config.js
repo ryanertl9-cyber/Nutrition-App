@@ -4,5 +4,5 @@
 window.NL_CONFIG = {
   supabaseUrl: 'https://srvhbqhuabepnisdvveg.supabase.co',
   supabaseKey: 'sb_publishable_gUZ7KqKivdG6APLC8xQhqQ_JUV6zaJP',
-  siteUrl: 'https://simplynutrition.netlify.app/',
+  siteUrl: 'https://simplynutrition.app/',
 };

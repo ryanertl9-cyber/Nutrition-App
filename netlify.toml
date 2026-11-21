@@ -16,6 +16,13 @@
   [headers.values]
     Cache-Control = "public, max-age=86400"
 
+# Send the old Netlify address to the real domain.
+[[redirects]]
+  from = "https://simplynutrition.netlify.app/*"
+  to = "https://simplynutrition.app/:splat"
+  status = 301
+  force = true
+
 # Keep repository internals off the public site.
 [[redirects]]
   from = "/vendor/*"

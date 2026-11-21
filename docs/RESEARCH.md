@@ -1,6 +1,6 @@
 # Nutrition tracking apps: competitive research
 
-*Prepared November 2026 for the Nutrient Ledger design.*
+*Prepared November 2026 for the Simply Nutrition design.*
 
 **Reliability.** Neither MyFitnessPal nor Cronometer publishes a detailed engineering architecture. The infrastructure notes below come from vendor case studies, patents, job ads and help-center pages. Retention and accuracy figures in this space mostly come from competing apps, which have a commercial interest. Each claim says where it came from.
 
@@ -44,7 +44,7 @@ These point to two design requirements: logging must be fast, and progress must 
 
 ## 5. Gaps an innovative app can fill
 
-| Gap in the market | Nutrient Ledger's answer |
+| Gap in the market | Simply Nutrition's answer |
 |---|---|
 | Micronutrient screens show many bars but don't say what matters. | **Scoreboard first**: "17 of 29 targets met", one stacked status bar, and a short "Needs attention" list. Full detail is one tap away. |
 | Shortfalls come without an answer. | **Gap closer**: tap a low nutrient to see where today's amount came from and which everyday foods close the gap, ranked by nutrient per calorie, each with a one-tap "+ Add". |

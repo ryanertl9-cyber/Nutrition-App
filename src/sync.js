@@ -1,4 +1,4 @@
-/* Nutrient Ledger: account sync. Local-first: the app always reads and writes its local copy;
+/* Simply Nutrition: account sync. Local-first: the app always reads and writes its local copy;
  * this engine pushes local changes to the account and pulls changes made on other devices.
  * Works in the browser (window.NLSync) and Node (module.exports) for tests. */
 (function (global) {

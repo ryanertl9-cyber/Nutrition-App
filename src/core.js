@@ -1,4 +1,4 @@
-/* Nutrient Ledger: core logic (no DOM). Runs in the browser (window.NL) and in Node (module.exports). */
+/* Simply Nutrition: core logic (no DOM). Runs in the browser (window.NL) and in Node (module.exports). */
 (function (global) {
   'use strict';
 

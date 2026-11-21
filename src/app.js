@@ -1099,7 +1099,7 @@
   // the Supabase library are loaded; otherwise the app runs in on-device mode.
   // ---------------------------------------------------------------------------
   const CFG = window.NL_CONFIG || null;
-  const FULL_SITE = (CFG && CFG.siteUrl) || 'https://nutrition-app-c6ea.netlify.app/';
+  const FULL_SITE = (CFG && CFG.siteUrl) || 'https://simplynutrition.netlify.app/';
   const LEGAL_BASE = CFG ? '' : FULL_SITE;
   const Acct = { client: null, engine: null, available: false, status: { state: 'idle', lastSynced: null }, importOffered: false };
 

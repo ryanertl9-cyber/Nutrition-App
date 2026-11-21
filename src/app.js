@@ -572,10 +572,15 @@
     if (!q) return `<p class="empty">Search ${db.foods.length.toLocaleString('en-US')} USDA foods, or switch to Recent for one-tap adds.</p>`;
     const mine = S.data.myFoods.filter((f) => NL.tokenize(q).every((t) => f.name.toLowerCase().includes(t))).slice(0, 5);
     const res = db.search(q, { limit: 30, usage });
+    const kinds = db.kindsFor(q);
     const row = (f) => {
       const p = (f.portions && f.portions[0]) || [100, '100 g'];
-      return `<li class="result"><button class="pick" data-action="pick" data-src="${f.src}" data-fid="${f.id}"><b>${esc(f.name)}</b><span class="meta">${foodTag(f)} ${esc(p[1])} · ${fmt(kcalOf(f, p[0]))} kcal</span></button></li>`;
+      const n = f.src === 'sr' ? db.versionsOf(f).length : 1;
+      const title = f.src === 'sr' ? f.familyName : f.name;
+      const detail = f.src === 'sr' && f.version ? `<span class="version">${esc(versionLabel(f.version))}</span>` : '';
+      return `<li class="result"><button class="pick" data-action="pick" data-src="${f.src}" data-fid="${f.id}"><b>${esc(title)}</b>${detail}<span class="meta">${foodTag(f)} ${esc(p[1])} · ${fmt(kcalOf(f, p[0]))} kcal${n > 1 ? ` · <span class="versions">${n} versions</span>` : ''}</span></button></li>`;
     };
+    const kindsRow = kinds ? `<div class="kinds" role="group" aria-label="Which kind?"><span class="eyebrow">Which kind?</span>${kinds.map(([label, kq]) => `<button class="chip" data-action="kind" data-q="${esc(kq)}">${esc(label)}</button>`).join('')}</div>` : '';
     let online = '';
     const o = sh.online;
     if (o && o.query === q) {
@@ -583,17 +588,37 @@
       else if (o.status === 'error') online = `<p class="small" style="color:var(--low)">${esc(o.message)}</p>`;
       else if (o.status === 'done') online = o.results.length ? `<div class="eyebrow" style="margin-top:14px">USDA FoodData Central (online)</div><ul class="results">${o.results.map((f, i) => `<li class="result"><button class="pick" data-action="pick-online" data-i="${i}"><b>${esc(f.name)}</b><span class="meta"><span class="tag mine">${esc(f.dataType || 'USDA')}</span> per 100 g · ${fmt(f.per100[0])} kcal</span></button></li>`).join('')}</ul>` : `<p class="empty">No online results for “${esc(q)}”.</p>`;
     }
-    return `${mine.length ? `<div class="eyebrow" style="margin-top:6px">My foods</div><ul class="results">${mine.map(row).join('')}</ul>` : ''}
+    return `${kindsRow}${mine.length ? `<div class="eyebrow" style="margin-top:6px">My foods</div><ul class="results">${mine.map(row).join('')}</ul>` : ''}
       ${res.length ? `<ul class="results">${res.map(row).join('')}</ul>` : `<p class="empty">No built-in match for “${esc(q)}”. Try a simpler word (“yogurt” instead of “strawberry yogurt cup”) or search online.</p>`}
       <div class="row" style="margin-top:12px"><button class="btn small" data-action="search-online">Search USDA online for “${esc(q)}”</button><button class="btn small ghost" data-action="new-custom-from-search">Create a custom food</button></div>
       ${online}`;
+  }
+  /** USDA version details, cooking method first and in plain words: "Grilled · lean & fat · 0" trim · all grades". */
+  function versionLabel(v) {
+    if (!v) return '';
+    const parts = v.split(/,\s*/);
+    const rank = (p) => (/^(raw|cooked|unprepared|prepared|frozen|canned)$/i.test(p) ? 0 : /(broiled|grilled|roasted|braised|stewed|baked|boiled|fried|simmered|steamed|microwaved|poached|scrambled|pan-browned|dry heat|moist heat)/i.test(p) ? 1 : /lean|meat|skin/i.test(p) ? 2 : /trimmed/i.test(p) ? 3 : /choice|select|prime|grades/i.test(p) ? 4 : 5);
+    const nice = (p) => p.replace(/^separable lean only$/i, 'lean only').replace(/^separable lean and fat$/i, 'lean & fat').replace(/^trimmed to (.*) fat$/i, '$1 fat trim').replace(/^without salt$/i, 'no salt').replace(/^dry heat$|^moist heat$/i, '');
+    const sorted = parts.map((p, i) => [rank(p), i, nice(p)]).filter((x) => x[2]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map((x) => x[2]);
+    // "cooked" adds nothing when a method follows it.
+    const out = sorted.filter((p, i) => !(p.toLowerCase() === 'cooked' && sorted[i + 1] && rank(sorted[i + 1]) === 1));
+    const text = out.join(' · ');
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+  /** Grade, trim, cooking method etc. for USDA foods that come in several versions. */
+  function versionPickerHTML(f) {
+    if (f.src !== 'sr') return '';
+    const vs = db.versionsOf(f);
+    if (vs.length < 2) return f.version ? `<p class="small muted" style="margin:0">${esc(versionLabel(f.version))}</p>` : '';
+    return `<label class="field"><span>Version (${vs.length})</span><select class="input" id="pp-version">${vs.map((v) => `<option value="${v.id}" ${v.id === f.id ? 'selected' : ''}>${esc(versionLabel(v.version) || 'Standard')} · ${fmt(v.per100[0])} kcal/100 g</option>`).join('')}</select></label>`;
   }
   function portionPaneHTML() {
     const sel = S.sheet.selected;
     const f = sel.food;
     return `<div class="portion-pane">
       <div><button class="btn ghost small" data-action="unpick">‹ Back to results</button></div>
-      <div><b style="font-size:1.05rem">${esc(f.name)}</b> ${foodTag(f)}</div>
+      <div><b style="font-size:1.05rem">${esc(f.src === 'sr' ? f.familyName : f.name)}</b> ${foodTag(f)}</div>
+      ${versionPickerHTML(f)}
       <div class="row">
         <label class="field" style="width:7em"><span>Amount</span><input class="input num" id="pp-qty" type="number" inputmode="decimal" min="0" step="any" value="${sel.qty}" data-autofocus></label>
         <label class="field" style="flex:1 1 12em"><span>Unit</span><select class="input" id="pp-unit">${sel.portions.map((p, j) => `<option value="${j}" ${j === sel.unitIdx ? 'selected' : ''}>${esc(p.label)}${p.label !== 'g' ? ` (${fmt(p.grams)} g)` : ''}</option>`).join('')}</select></label>
@@ -946,6 +971,13 @@
         S.sheet = null; commit(); return;
       }
       case 'add-view': sh.view = a.dataset.view; renderSheet(); return;
+      case 'kind': {
+        sh.query = a.dataset.q;
+        const inp = $('#add-q');
+        if (inp) inp.value = a.dataset.q;
+        $('#add-results').innerHTML = resultsHTML();
+        return;
+      }
       case 'pick': {
         const f = foodOf(a.dataset.src, a.dataset.src === 'sr' ? Number(a.dataset.fid) : a.dataset.fid);
         if (!f) return;
@@ -1042,6 +1074,15 @@
   document.addEventListener('change', (ev) => {
     const el = ev.target;
     const sh = S.sheet;
+    if (el.id === 'pp-version') {
+      const f = db.get(Number(el.value));
+      const cur = sh.selected;
+      const label = cur.portions[cur.unitIdx].label;
+      const keepGrams = cur.portions[cur.unitIdx].grams;
+      selectFood(f, cur.qty, label, keepGrams);
+      renderSheet();
+      return;
+    }
     if (el.id === 'pp-unit') { sh.selected.unitIdx = Number(el.value); $('#pp-preview').innerHTML = portionPreviewHTML(); return; }
     if (el.id === 'pp-meal') { sh.meal = el.value; return; }
     if (el.id === 'nl-meal') { S.nlMeal = el.value; if (S.parsed) { S.parsed.meal = el.value; render(); } return; }

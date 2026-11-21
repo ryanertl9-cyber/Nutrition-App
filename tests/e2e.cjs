@@ -114,6 +114,25 @@ async function step(name, fn) {
     assert.equal(lunch[0].grams, 170.1);
   });
 
+  await step('"steak" offers cuts, and a cut has a version picker', async () => {
+    await page.click('[data-action="open-add"][data-meal="dinner"]');
+    await page.fill('#add-q', 'steak');
+    await page.waitForSelector('.kinds [data-action="kind"]');
+    await page.click('.kinds [data-action="kind"] >> text=NY strip');
+    assert.equal(await page.inputValue('#add-q'), 'ny strip');
+    assert.match(await page.textContent('#add-results .result >> nth=0'), /top loin/);
+    assert.match(await page.textContent('#add-results .result >> nth=0'), /versions/);
+    await page.click('#add-results [data-action="pick"] >> nth=0');
+    const opts = await page.locator('#pp-version option').count();
+    assert.ok(opts > 3);
+    const before = await page.textContent('#pp-preview');
+    const second = await page.getAttribute('#pp-version option >> nth=1', 'value');
+    await page.selectOption('#pp-version', second);
+    assert.equal(await page.inputValue('#pp-version'), second);
+    assert.notEqual(await page.textContent('#pp-preview'), before);
+    await page.click('[data-action="close-sheet"]');
+  });
+
   await step('editing an entry changes its amount', async () => {
     await page.click('.entry .name >> text=Fish, salmon');
     await page.fill('#pp-qty', '4');

@@ -221,3 +221,52 @@ test('sample data is deterministic and leaves today in progress', () => {
   assert.ok(today.includes('breakfast') && today.includes('lunch'));
   assert.ok(!today.includes('dinner'));
 });
+
+test('everyday steak names find the right beef cut', () => {
+  const top = (q) => db.search(q, { limit: 1 })[0];
+  assert.match(top('ny strip').name, /^Beef, short loin, top loin/);
+  assert.match(top('new york strip steak').name, /^Beef, short loin, top loin/);
+  assert.match(top('filet mignon').name, /tenderloin/);
+  assert.match(top('ribeye').name, /^Beef, rib eye/);
+  assert.match(top('t-bone').name, /t-bone steak/);
+  assert.match(top('sirloin').name, /^Beef/);
+  assert.match(top('pork sirloin').name, /^Pork/, 'naming another animal keeps it');
+  assert.match(top('oj').name, /^Orange juice/);
+});
+
+test('versions of one food collapse into a single result', () => {
+  const res = db.search('ribeye', { limit: 30 });
+  const families = res.map((f) => f.family);
+  assert.equal(new Set(families).size, families.length, 'no family appears twice');
+  const ribeye = res[0];
+  const versions = db.versionsOf(ribeye);
+  assert.ok(versions.length > 10, 'grades, trims and cooking methods are versions');
+  assert.ok(versions.every((v) => v.family === ribeye.family));
+});
+
+test('meat defaults to a cooked version', () => {
+  for (const q of ['ribeye', 'chicken thigh', 'salmon', 'bacon', 'pork chop']) {
+    assert.ok(db.search(q, { limit: 1 })[0].cooked, q);
+  }
+});
+
+test('broad words offer "which kind?" choices that all find food', () => {
+  assert.deepEqual(db.kindsFor('Steak').map((k) => k[0]).slice(0, 3), ['Ribeye', 'NY strip', 'Filet mignon']);
+  assert.equal(db.kindsFor('ribeye'), null);
+  for (const word of ['steak', 'beef', 'chicken', 'pork', 'cheese', 'bread', 'rice', 'milk', 'fish', 'beans', 'pasta', 'yogurt', 'potato']) {
+    for (const [label, q] of db.kindsFor(word)) assert.ok(db.search(q, { limit: 1 }).length, `${word} → ${label}`);
+  }
+});
+
+test('typos are corrected, nonsense is not', () => {
+  assert.equal(db.search('brocoli', { limit: 1 })[0].familyName, 'Broccoli');
+  assert.equal(db.search('bannana', { limit: 1 })[0].name, 'Bananas, raw');
+  assert.match(db.search('chiken breast', { limit: 1 })[0].name, /^Chicken, broilers or fryers, breast/);
+  assert.equal(db.search('qwertyfood').length, 0);
+});
+
+test('splitName separates the food from its version details', () => {
+  assert.deepEqual(NL.splitName('Beef, loin, top loin steak, boneless, lip off, separable lean only, trimmed to 0" fat, choice, cooked, grilled'),
+    { family: 'Beef, loin, top loin steak', version: 'boneless, lip off, separable lean only, trimmed to 0" fat, choice, cooked, grilled' });
+  assert.deepEqual(NL.splitName('Bananas, raw'), { family: 'Bananas', version: 'raw' });
+});

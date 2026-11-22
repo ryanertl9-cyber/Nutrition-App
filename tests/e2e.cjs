@@ -302,7 +302,7 @@ async function step(name, fn) {
     await page.click(`.cal-day[data-date="${target}"]`);
     assert.equal(await page.locator('.cal-grid').count(), 0, 'calendar closes');
     assert.equal(await page.evaluate(() => window.NutrientLedger.state.date), target);
-    assert.ok(!(await page.isHidden('#btn-today')));
+    assert.equal(await page.locator('#btn-today').count(), 1, 'Today button appears on a past day');
     await page.click('[data-action="open-cal"]');
     await page.click('.cal-foot [data-action="cal-pick"]');
     assert.equal(await page.evaluate(() => window.NutrientLedger.state.date), today);

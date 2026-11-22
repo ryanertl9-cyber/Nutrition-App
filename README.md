@@ -74,7 +74,7 @@ npm run test:accounts
 
 | Screen | Purpose |
 |---|---|
-| Today | Date bar with a calendar to jump to any day (logged days are dotted). Scoreboard (with a "Macros only" fold that hides the 24 micronutrient and limit rows and enlarges calories, protein, carbs, fat and fiber; remembered per device) (count met, status bar, calories and macros, Needs attention, all nutrients with filter), natural-language entry, and meals with entries. |
+| Today | Scoreboard with the day controls built in (‹ › arrows, a calendar to jump to any day with logged days dotted, and Today; tapping the date also opens the calendar) (with a "Macros only" fold that hides the 24 micronutrient and limit rows and enlarges calories, protein, carbs, fat and fiber; remembered per device) (count met, status bar, calories and macros, Needs attention, all nutrients with filter), natural-language entry, and meals with entries. |
 | Add food (sheet) | Search, Recent, Meals and My foods tabs, plus Scan on phones (typing a barcode number into search works everywhere). The portion picker shows a live preview of the food's contribution to each target. Online USDA search is available here. |
 | Scan barcode (sheet) | Live camera with a guide box, or a typed number. Found products open the portion picker; unknown ones can be added from the label. |
 | Nutrient detail (sheet) | Amount against target, the basis for the target, a missing-data warning, top sources, and gap-closing foods with "+ Add". |

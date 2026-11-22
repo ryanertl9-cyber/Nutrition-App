@@ -70,9 +70,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: var(--safe
 .brand .mark { width: 18px; height: 18px; flex: none; }
 .brand .mark rect { fill: var(--ink); }
 .brand .mark rect.miss { fill: var(--low); }
-.datenav { display: flex; align-items: center; gap: 4px; }
-.datenav .label { min-width: 9.5em; text-align: center; font-weight: 650; }
-.datenav .btn.icon { font-size: 1.3rem; line-height: 1; padding: 2px 10px 5px; }
 .account-slot { display: flex; align-items: center; min-width: 0; }
 .account-slot .btn { max-width: 15em; }
 .acct-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -267,7 +264,6 @@ details summary { cursor: pointer; font-weight: 600; }
   .nrow .bar { grid-column: 2 / -1; grid-row: 2; }
   .preview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bigcount { font-size: 2.6rem; }
-  .datenav .label { min-width: 7.5em; }
 }
 
 /* ---- Dark modern theme, matching the landing page ---- */
@@ -284,13 +280,11 @@ body::before { background: var(--bg); }
   .appbar .wrap { padding-block: 8px 0; row-gap: 4px; }
   .brand { order: 0; }
   .account-slot { order: 1; }
-  .datenav { order: 2; flex-basis: 100%; justify-content: space-between; }
   .tabs { order: 3; }
   .tab { padding: 11px 12px 10px; }
 }
 .tab { font: 600 .72rem/1 var(--body); letter-spacing: .16em; text-transform: uppercase; padding: 15px 14px 13px; border-bottom-width: 2px; }
 .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
-.datenav .label { font-weight: 600; }
 .btn { border-radius: 999px; background: rgb(255 255 255 / 6%); border-color: var(--line-strong); padding: 8px 16px; }
 .btn:hover { background: rgb(255 255 255 / 12%); border-color: var(--line-strong); }
 .btn.primary { background: var(--white); color: #000; border-color: var(--white); }
@@ -337,6 +331,17 @@ body::before { background: var(--bg); }
 .score .nrow:hover { background: #e9e2d3; }
 
 /* Fold: "Macros only" collapses the micronutrient parts and enlarges the macros. */
+/* Date controls live on the scoreboard (one date on screen, in the scoreboard's own type). */
+.score-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.day-ctrls { display: flex; align-items: center; gap: 4px; }
+.day-ctrls .icon-btn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; border: 1px solid var(--line-strong); background: transparent; color: var(--ink); cursor: pointer; padding: 0; }
+@media (hover: hover) { .day-ctrls .icon-btn:hover { background: var(--sunken); border-color: var(--ink); } }
+.day-ctrls .icon-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.day-ctrls .today-btn { height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--ink); background: var(--ink); color: var(--surface); font: 600 .8rem/1 var(--body); cursor: pointer; margin-left: 2px; }
+.date-btn { font: inherit; letter-spacing: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-align: left; display: inline-flex; align-items: baseline; gap: .3em; }
+.date-btn .cal { width: .62em; height: .62em; flex: none; fill: none; stroke: var(--muted); stroke-width: 2.4; stroke-linecap: round; align-self: center; }
+.date-btn:hover .cal { stroke: var(--ink); }
+.date-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
 .fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .4s ease, opacity .3s ease; }
 .fold > .fold-inner { overflow: hidden; min-height: 0; }
 .macro-mode .fold { grid-template-rows: 0fr; opacity: 0; }
@@ -411,9 +416,6 @@ body::before { background: var(--bg); }
 .meal-chip .muted { font-weight: 500; }
 .home-link { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--muted); }
 .home-link:hover { color: var(--ink); }
-.date-pick { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: none; border: 1px solid transparent; border-radius: 999px; color: inherit; font: inherit; font-weight: 600; padding: 6px 12px; cursor: pointer; }
-.date-pick:hover { background: rgb(255 255 255 / 8%); }
-.date-pick svg { width: 16px; height: 16px; flex: none; fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; }
 .sheet.cal-sheet { width: min(420px, 100%); }
 .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .cal-head b { font-size: 1.05rem; }
@@ -456,12 +458,6 @@ body::before { background: var(--bg); }
   <div class="wrap">
     <div class="brand"><svg class="mark" viewBox="0 0 23 23" aria-hidden="true"><rect x="0" y="0" width="6" height="6" rx="1.6"/><rect x="8.5" y="0" width="6" height="6" rx="1.6"/><rect x="17" y="0" width="6" height="6" rx="1.6"/><rect x="0" y="8.5" width="6" height="6" rx="1.6"/><rect x="8.5" y="8.5" width="6" height="6" rx="1.6"/><rect x="17" y="8.5" width="6" height="6" rx="1.6"/><rect x="0" y="17" width="6" height="6" rx="1.6"/><rect x="8.5" y="17" width="6" height="6" rx="1.6"/><rect x="17" y="17" width="6" height="6" rx="1.6" class="miss"/></svg><h1>Simply Nutrition</h1></div>
     <a class="btn ghost small home-link" href="/?home" data-hosted-only aria-label="Home page" title="Home page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Home</span></a>
-    <div class="datenav" id="datenav">
-      <button class="btn ghost icon" data-action="day-prev" aria-label="Previous day">‹</button>
-      <button class="label date-pick" data-action="open-cal" aria-label="Choose a date" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span id="date-label"></span></button>
-      <button class="btn ghost icon" data-action="day-next" aria-label="Next day">›</button>
-      <button class="btn small" data-action="day-today" id="btn-today">Today</button>
-    </div>
     <div id="account-slot" class="account-slot"></div>
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button class="tab" role="tab" data-tab="today" id="tab-today">Today</button>

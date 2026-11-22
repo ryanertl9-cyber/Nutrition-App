@@ -144,9 +144,6 @@
   // ---------------------------------------------------------------------------
   function render() {
     for (const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', String(t.dataset.tab === S.tab));
-    $('#datenav').hidden = S.tab !== 'today';
-    $('#date-label').textContent = dateLabel(S.date);
-    $('#btn-today').hidden = S.date === S.today;
     const main = $('#main');
     const banner = S.data.sample
       ? `<div class="banner"><p><b>You're looking at example data.</b> Ten weeks of sample meals show how the app works. Your own log starts when you clear them.</p><div class="row"><button class="btn primary" data-action="start-own">Start my own log</button></div></div>`
@@ -226,8 +223,17 @@
 
     const score = `
       <section class="score${macrosOnly ? ' macro-mode' : ''}" aria-labelledby="score-h">
+        <div class="score-nav">
+          <div class="eyebrow">Daily targets</div>
+          <div class="day-ctrls" role="group" aria-label="Change day">
+            <button class="icon-btn" data-action="day-prev" aria-label="Previous day"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <button class="icon-btn" data-action="open-cal" aria-label="Choose a date" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+            <button class="icon-btn" data-action="day-next" aria-label="Next day"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+            ${S.date !== S.today ? '<button class="today-btn" data-action="day-today" id="btn-today">Today</button>' : ''}
+          </div>
+        </div>
         <div class="score-title">
-          <div><div class="eyebrow">Daily targets</div><h2 id="score-h">${esc(dateLabel(S.date))}</h2></div>
+          <div><h2 id="score-h"><button class="date-btn" data-action="open-cal" aria-label="${esc(dateLabel(S.date))}. Choose a date" aria-haspopup="dialog"><span id="date-label">${esc(dateLabel(S.date))}</span><svg class="cal" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button></h2></div>
           <div class="bigcount"><span class="count-all" aria-label="${c.met} of ${rep.total} targets met">${c.met}<small>/${rep.total} met</small></span><span class="count-macro" aria-label="${macroMet} of ${macroRows.length} macro targets met">${macroMet}<small>/${macroRows.length} macros met</small></span></div>
         </div>
         <div class="rule-xl"></div>

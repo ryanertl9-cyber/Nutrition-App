@@ -15,6 +15,6 @@
       if (k.indexOf('nutrient-ledger:acct:') === 0 || /^sb-.*-auth-token$/.test(k)) { window.location.replace('/app/'); return; }
     }
     var guest = JSON.parse(store.getItem('nutrient-ledger:v1') || 'null');
-    if (guest && !guest.sample && guest.entries && guest.entries.length) window.location.replace('/app/');
+    if (guest && !guest.sample && (guest.onboarded || (guest.entries && guest.entries.length))) window.location.replace('/app/');
   } catch (e) { /* storage blocked: show the landing page */ }
 })();

@@ -52,20 +52,46 @@ async function step(name, fn) {
   await page.goto(url + 'app/');
   await page.waitForSelector('.score');
 
-  await step('first visit opens on example data with a scoreboard', async () => {
-    assert.ok(await page.isVisible('.banner'));
-    const txt = await page.textContent('.bigcount');
-    assert.match(txt, /\d+\/29 met/);
-    assert.ok((await todayEntries()).length > 0);
+  await step('first visit opens the guided setup', async () => {
+    assert.ok(await page.isVisible('[data-action="welcome-start"]'));
+    assert.equal(await entryCount(), 0);
   });
 
-  await step('start my own log clears examples and opens profile', async () => {
-    await page.click('[data-action="start-own"]');
-    assert.equal(await entryCount(), 0);
-    assert.ok(await page.isVisible('#p-age'));
+  await step('guided setup: about you, goal with live targets, first meal', async () => {
+    await page.click('[data-action="welcome-start"]');
+    await page.fill('#w-age', '9');
+    await page.click('[data-action="welcome-next"]');
+    assert.match(await page.textContent('[role="alert"]'), /age between 14 and 110/);
+    await page.fill('#w-age', '41');
+    await page.click('[data-action="welcome-sex"][data-sex="male"]');
+    assert.equal(await page.inputValue('#w-age'), '41', 'typed values survive choosing sex');
+    await page.fill('#w-ft', '5'); await page.fill('#w-in', '11'); await page.fill('#w-lb', '185');
+    await page.click('[data-action="welcome-next"]');
+    const before = await page.textContent('#w-targets');
+    await page.click('.w-choice[data-goal="lose"]');
+    assert.notEqual(await page.textContent('#w-targets'), before, 'targets update as you choose');
+    await page.click('[data-action="welcome-next"]');
+    await page.click('[data-action="welcome-example-meal"] >> nth=0');
+    await page.click('[data-action="welcome-read"]');
+    await page.waitForSelector('[data-action="welcome-add-meal"]');
+    await page.click('[data-action="welcome-add-meal"]');
+    const d = await page.evaluate(() => window.NutrientLedger.state.data);
+    assert.equal(d.onboarded, true);
+    assert.deepEqual([d.profile.sex, d.profile.age, d.profile.goal, d.profile.heightCm], ['male', 41, 'lose', 180]);
+    assert.ok(d.entries.length >= 2, 'first meal logged');
+    assert.ok(!(await page.isVisible('.sheet')));
+    assert.match(await page.textContent('.bigcount'), /\/29 met/);
+  });
+
+  await step('the guided setup does not come back after reload', async () => {
+    await page.reload();
+    await page.waitForSelector('.score');
+    assert.equal(await page.locator('[data-action="welcome-start"]').count(), 0);
+    await page.evaluate(() => { const s = window.NutrientLedger.state; s.data.entries = []; });
   });
 
   await step('changing the profile recalculates targets', async () => {
+    await page.click('[data-tab="settings"]');
     await page.selectOption('#p-sex', 'male');
     await page.fill('#p-age', '40'); await page.press('#p-age', 'Tab');
     const t = await page.evaluate(() => window.NL.computeTargets(window.NutrientLedger.state.data.profile).iron.target);
@@ -291,12 +317,8 @@ async function step(name, fn) {
   });
   await step('returning users skip the landing page; ?home shows it anyway', async () => {
     await lp.goto(url + 'app/');
-    await lp.waitForSelector('.score');
-    await lp.click('[data-action="start-own"]');
-    await lp.click('[data-tab="today"]');
-    await lp.fill('#nl-input', 'a banana');
-    await lp.click('[data-action="nl-parse"]');
-    await lp.click('[data-action="parsed-add"]');
+    await lp.waitForSelector('[data-action="welcome-start"]');
+    await lp.click('[data-action="close-sheet"]'); // skipping setup still counts as having used the app
     await lp.goto(url);
     await lp.waitForURL(/\/app\/$/);
     await lp.goto(url + '?home');
@@ -319,7 +341,12 @@ async function step(name, fn) {
   const errors2 = [];
   p2.on('pageerror', (e) => errors2.push(e.message));
   await p2.goto(url + 'app/');
-  await p2.waitForSelector('.score');
+  await p2.waitForSelector('[data-action="welcome-example"]');
+  await step('phone: "See an example day" loads the sample log', async () => {
+    await p2.click('[data-action="welcome-example"]');
+    assert.ok(await p2.isVisible('.banner'));
+    assert.ok(await p2.evaluate(() => window.NutrientLedger.state.data.entries.length > 50));
+  });
   for (const tab of ['today', 'trends', 'foods', 'settings']) {
     await step(`phone ${tab}: no sideways page scroll`, async () => {
       await p2.click(`[data-tab="${tab}"]`);

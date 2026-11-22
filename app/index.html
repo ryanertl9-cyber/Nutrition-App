@@ -350,6 +350,29 @@ body::before { background: var(--bg); }
 .more-detail { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
 .more-detail summary { cursor: pointer; color: var(--muted); font-weight: 600; font-size: .9rem; }
 .more-detail[open] summary { color: var(--ink); }
+
+/* Guided first visit */
+.w-intro { text-align: center; }
+.w-hero { display: grid; gap: 12px; justify-items: center; padding: 10px 0 6px; }
+.w-hero .mark { width: 44px; height: 44px; }
+.w-hero .mark rect { fill: var(--ink); }
+.w-hero .mark rect.miss { fill: var(--low); }
+.w-hero h2 { font-size: 1.6rem; line-height: 1.15; max-width: 14em; }
+.w-big { padding: 13px 22px; font-size: 1rem; }
+.w-steps { display: flex; align-items: center; gap: 6px; }
+.w-steps span:not(.w-stepnum) { width: 26px; height: 4px; border-radius: 2px; background: var(--track); }
+.w-steps span.done { background: var(--muted); }
+.w-steps span.on { background: var(--accent); }
+.w-stepnum { margin-left: 8px; font-size: .78rem; color: var(--muted); font-weight: 600; letter-spacing: .04em; }
+.w-seg { align-self: flex-start; }
+.w-choices { display: grid; gap: 8px; }
+.w-choice { display: grid; gap: 2px; text-align: left; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line-strong); background: var(--sunken); cursor: pointer; }
+.w-choice span { color: var(--muted); font-size: .85rem; }
+.w-choice[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent) inset; }
+.w-summary { background: var(--sunken); border-radius: 14px; padding: 12px 14px; display: grid; gap: 4px; }
+.w-sumrow { display: flex; align-items: baseline; gap: 8px; }
+.w-sumrow b { font-family: var(--display); font-size: 1.25rem; }
+.w-sumrow span { color: var(--muted); }
 </style>
 <!-- ARTIFACT-HEAD-END -->
 </head>

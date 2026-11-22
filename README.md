@@ -56,7 +56,7 @@ npm run test:accounts
 ## How it works
 
 **User flows**
-1. **First visit.** The app opens on ten weeks of clearly labelled example data, so every screen shows something real. "Start my own log" clears the examples and opens Profile.
+1. **First visit.** A guided setup: welcome → about you (sex, age, height, weight; can be skipped) → your goal and activity, with daily targets updating live → log your first meal in words. "Just looking? See an example day" loads ten weeks of labelled sample data instead; "Start my own log" clears it and returns to the setup. New accounts with no saved profile also get the setup.
 2. **Profile.** Enter sex, age, height, weight, activity and goal. Targets are computed instantly, and any of them can be overridden.
 3. **Log a meal.** Type it in words, or tap "+ Add food" on a meal. Search, pick a portion, and see live how much the food adds to each target before adding it.
 4. **Check the day.** Read the scoreboard and the Needs-attention chips, then tap a nutrient for its sources and suggested foods.

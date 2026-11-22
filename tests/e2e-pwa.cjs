@@ -46,6 +46,7 @@ async function step(name, fn) {
   await step('the service worker installs and takes control', async () => {
     await page.goto(url + 'app/');
     await page.waitForSelector('.score');
+    await page.click('[data-action="close-sheet"]'); // skip the guided setup
     await page.evaluate(() => navigator.serviceWorker.ready);
     await page.reload();
     await page.waitForSelector('.score');
@@ -62,7 +63,6 @@ async function step(name, fn) {
   });
 
   await step('the app opens and works with no network', async () => {
-    await page.click('[data-action="start-own"]');
     await ctx.setOffline(true);
     await page.reload();
     await page.waitForSelector('.score');
@@ -100,9 +100,8 @@ async function step(name, fn) {
     p.on('pageerror', (e) => errors.push('ios: ' + e.message));
     await p.goto(url + 'app/');
     await p.waitForSelector('.score');
-    assert.equal(await p.locator('.install').count(), 0, 'not shown over the example data');
-    await p.click('[data-action="start-own"]');
-    await p.click('[data-tab="today"]');
+    assert.equal(await p.locator('.install').count(), 0, 'not shown during the guided setup');
+    await p.click('[data-action="close-sheet"]');
     assert.match(await p.textContent('.install'), /Add to Home Screen/);
     await p.click('[data-action="install-dismiss"]');
     assert.equal(await p.locator('.install').count(), 0);

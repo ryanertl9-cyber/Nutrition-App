@@ -52,6 +52,8 @@ async function until(fn, ms = 8000) {
     page.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g|ERR_|Failed to load resource/.test(m.text())) errors.push(`${name}: ${m.text()}`); });
     await page.goto(url + 'app/');
     await page.waitForSelector('.score');
+    // First visit opens the guided setup; these tests start from the example day, as before.
+    await page.click('[data-action="welcome-example"]');
     return { ctx, page };
   }
   const st = (page) => page.evaluate(() => { const s = window.NutrientLedger.state; return { user: s.user, entries: s.data.entries, foods: s.data.myFoods, profile: s.data.profile }; });
@@ -70,6 +72,10 @@ async function until(fn, ms = 8000) {
   await step('guest mode works and shows a Sign in button', async () => {
     assert.ok(await p1.isVisible('#account-slot [data-action="auth-open"]'));
     await p1.click('[data-action="start-own"]');
+    await p1.waitForSelector('#w-age');
+    await p1.click('[data-action="welcome-skip-profile"]');
+    await p1.click('[data-action="welcome-next"]');
+    await p1.click('[data-action="welcome-finish"]');
     await p1.click('[data-tab="today"]');
     await p1.fill('#nl-input', '2 eggs and a banana');
     await p1.click('[data-action="nl-parse"]');
@@ -218,7 +224,8 @@ async function until(fn, ms = 8000) {
     const s = await st(p3);
     assert.equal(s.entries.length, 0);
     assert.equal(s.foods.length, 0);
-    assert.equal(await p3.isVisible('[data-tab="settings"][aria-selected="true"]'), true, 'new account lands on profile setup');
+    await p3.waitForSelector('#w-age'); // a new account with no saved profile gets the guided setup
+    await p3.click('[data-action="close-sheet"]');
     // Directly ask the server for the other user's rows with Ben's session.
     const leaked = await p3.evaluate(async () => {
       const c = window.NutrientLedger.account.client;

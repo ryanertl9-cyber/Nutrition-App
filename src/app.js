@@ -52,6 +52,7 @@
     d.myFoods = d.myFoods || [];
     d.entries = d.entries || [];
     d.profile = Object.assign({}, NL.DEFAULT_PROFILE, d.profile || {});
+    if (d.onboarded === undefined) d.onboarded = true; // logs from before the guided first visit
     return d;
   }
   function freshData(withSample) {
@@ -63,6 +64,7 @@
       myFoods: [],
       settings: { apiKey: '', units: 'us' },
       sample: !!withSample,
+      onboarded: true,
     };
   }
 
@@ -524,6 +526,7 @@
   // ---------------------------------------------------------------------------
   function openSheet(sheet) { S.sheet = sheet; renderSheet(); setTimeout(() => { const f = document.querySelector('#sheet-root [data-autofocus]'); if (f) f.focus(); }, 30); }
   function closeSheet() {
+    if (S.sheet && S.sheet.type === 'welcome' && !S.data.onboarded) { S.data.onboarded = true; save(); S.dirtyRender = true; } // closing the welcome = skip it
     S.sheet = null;
     if (S.dirtyRender) { S.dirtyRender = false; render(); } else renderSheet();
   }
@@ -531,7 +534,7 @@
     const root = $('#sheet-root');
     if (!S.sheet) { root.innerHTML = ''; document.body.style.overflow = ''; return; }
     const sh = S.sheet;
-    const map = { add: sheetAdd, detail: sheetDetail, custom: sheetCustom, recipe: sheetRecipe, auth: sheetAuth, account: sheetAccount, import: sheetImport };
+    const map = { add: sheetAdd, detail: sheetDetail, custom: sheetCustom, recipe: sheetRecipe, auth: sheetAuth, account: sheetAccount, import: sheetImport, welcome: sheetWelcome };
     const { title, body } = map[sh.type]();
     root.innerHTML = `<div class="scrim" data-action="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
       <div class="sheet-head"><h2 id="sheet-title">${title}</h2><button class="btn ghost icon" data-action="close-sheet" aria-label="Close">✕</button></div>
@@ -923,9 +926,10 @@
       case 'detail': if (a.dataset.range) S.date = S.today; openSheet({ type: 'detail', key: a.dataset.key }); return;
       case 'start-own':
         S.data.entries = S.data.entries.filter((e) => !e.sample);
-        S.data.sample = false; S.tab = 'settings'; S.date = S.today;
-        toast('Example data removed. Set up your profile to get your targets.');
-        commit(); return;
+        S.data.sample = false; S.data.onboarded = false; S.tab = 'today'; S.date = S.today;
+        commit();
+        openWelcome(1);
+        return;
       case 'load-sample':
         S.data.entries = S.data.entries.concat(NL.sampleEntries(db, S.today, 70));
         S.data.sample = true; toast('Example data added'); commit(); return;
@@ -1210,7 +1214,7 @@
         if (S.sheet && S.sheet.type === 'account') renderSheet();
       },
     });
-    if (S.sheet && S.sheet.type === 'auth') S.sheet = null;
+    if (S.sheet && (S.sheet.type === 'auth' || S.sheet.type === 'welcome')) S.sheet = null;
     reindex();
     render();
     const guest = readKey(STORE_KEY);
@@ -1226,11 +1230,7 @@
   function firstSync(imported) {
     if (!Acct.engine) return;
     Acct.engine.sync().then((r) => {
-      if (r && r.firstSync && !r.remoteProfileFound && !imported) {
-        S.tab = 'settings';
-        render();
-        toast('Welcome! Set up your profile so your targets fit you.');
-      }
+      if (r && r.firstSync && !r.remoteProfileFound && !imported && !S.sheet) openWelcome(1, { forAccount: true });
     }).catch(() => { /* status shows the error */ });
   }
 
@@ -1254,7 +1254,7 @@
     Acct.engine = null;
     Acct.status = { state: 'idle', lastSynced: null };
     S.user = null;
-    S.data = normalize(load() || freshData(true));
+    S.data = normalize(load() || freshData(false));
     S.sheet = null;
     reindex();
     render();
@@ -1520,6 +1520,181 @@
   });
 
   // ---------------------------------------------------------------------------
+  // Guided first visit: welcome → about you → your goal → first meal.
+  // Shown once, to people with no saved log (and to new accounts with no saved profile).
+  // ---------------------------------------------------------------------------
+  const MEAL_EXAMPLES = ['2 eggs and a slice of toast', 'Greek yogurt with blueberries', 'Coffee with milk and a banana', 'Turkey sandwich and an apple'];
+  function openWelcome(step, opts) {
+    openSheet(Object.assign({ type: 'welcome', step: step || 0, mealText: '', parsed: null, meal: defaultMeal(), error: '' }, opts));
+  }
+  function finishWelcome(message) {
+    S.data.onboarded = true;
+    S.data.sample = false;
+    S.sheet = null;
+    S.tab = 'today';
+    S.date = S.today;
+    commit();
+    window.scrollTo(0, 0);
+    if (message) toast(message);
+  }
+  function welcomeSteps(step) {
+    return `<div class="w-steps" aria-label="Step ${step} of 3">${[1, 2, 3].map((n) => `<span class="${n === step ? 'on' : n < step ? 'done' : ''}"></span>`).join('')}<span class="w-stepnum">Step ${step} of 3</span></div>`;
+  }
+  /** Read step 1 into the profile. Returns an error message, or '' when valid. */
+  function readWelcomeProfile() {
+    const p = S.data.profile;
+    const num = (id) => { const el = document.getElementById(id); return el ? Number(el.value) : NaN; };
+    const age = num('w-age');
+    if (!(age >= 14 && age <= 110)) return 'Enter an age between 14 and 110. Targets here are for teens and adults.';
+    let cm, kg;
+    if (S.data.settings.units === 'us') {
+      cm = (num('w-ft') * 12 + (num('w-in') || 0)) * 2.54;
+      kg = num('w-lb') / 2.20462;
+    } else {
+      cm = num('w-cm');
+      kg = num('w-kg');
+    }
+    if (!(cm >= 120 && cm <= 230)) return 'Check your height.';
+    if (!(kg >= 30 && kg <= 320)) return 'Check your weight.';
+    Object.assign(p, { age: Math.round(age), heightCm: Math.round(cm), weightKg: Math.round(kg * 10) / 10 });
+    return '';
+  }
+  function welcomeTargetsHTML() {
+    const t = NL.computeTargets(S.data.profile, S.data.overrides);
+    return `<div class="w-summary"><div class="eyebrow">Your daily targets</div>
+      <div class="w-sumrow"><b class="num">${fmt(t.kcal.target)}</b><span>calories</span></div>
+      <div class="w-sumrow"><b class="num">${fmt(t.protein.target)} g</b><span>protein</span></div>
+      <div class="w-sumrow"><b class="num">${fmt(t.fiber.target)} g</b><span>fiber</span></div>
+      <p class="small muted" style="margin:6px 0 0">Plus 13 vitamins, 9 minerals and limits for sodium and saturated fat: 29 targets in all. You can change any of them later in Profile.</p></div>`;
+  }
+  function sheetWelcome() {
+    const sh = S.sheet;
+    const p = S.data.profile;
+    const err = `<p class="small" role="alert" data-auth-error style="color:var(--low);margin:0" ${sh.error ? '' : 'hidden'}>${esc(sh.error || '')}</p>`;
+    if (sh.step === 0) {
+      return { title: 'Welcome', body: `<div class="portion-pane w-intro">
+        <div class="w-hero"><svg class="mark" viewBox="0 0 23 23" aria-hidden="true">${[0, 1, 2].map((r) => [0, 1, 2].map((c) => `<rect x="${c * 8.5}" y="${r * 8.5}" width="6" height="6" rx="1.6"${r === 2 && c === 2 ? ' class="miss"' : ''}/>`).join('')).join('')}</svg>
+          <h2>See which nutrients you hit, and which you miss.</h2>
+          <p class="muted" style="margin:0">Three quick steps: about you, your goal, and your first meal. About a minute.</p></div>
+        <button class="btn primary w-big" data-action="welcome-start" data-autofocus>Get started</button>
+        <button class="btn ghost" data-action="welcome-example">Just looking? See an example day</button>
+        ${Acct.available ? `<p class="small muted" style="margin:0;text-align:center">Already have an account? <button class="btn ghost small" data-action="auth-open" data-mode="signin">Sign in</button></p>` : ''}
+      </div>` };
+    }
+    if (sh.step === 1) {
+      const us = S.data.settings.units === 'us';
+      const ft = Math.floor(p.heightCm / 30.48), inch = Math.round(p.heightCm / 2.54 - ft * 12);
+      return { title: sh.forAccount ? 'Set up your targets' : 'About you', body: `<div class="portion-pane">
+        ${welcomeSteps(1)}
+        <p class="muted" style="margin:0">Daily needs depend on your age, sex and size. This stays on your device${S.user ? ' and in your account' : ''}.</p>
+        <div class="field"><span>Sex (for nutrient guidelines)</span><div class="seg w-seg" role="group">${[['female', 'Female'], ['male', 'Male']].map(([k, n]) => `<button type="button" data-action="welcome-sex" data-sex="${k}" aria-pressed="${p.sex === k}">${n}</button>`).join('')}</div></div>
+        <div class="grid2">
+          <label class="field"><span>Age</span><input class="input num" id="w-age" type="number" inputmode="numeric" min="14" max="110" value="${p.age}"></label>
+          ${us ? `<div class="field"><span>Height</span><div class="row" style="flex-wrap:nowrap"><input class="input num" id="w-ft" type="number" inputmode="numeric" min="3" max="7" value="${ft}" aria-label="Feet"><span class="muted">ft</span><input class="input num" id="w-in" type="number" inputmode="numeric" min="0" max="11" value="${inch}" aria-label="Inches"><span class="muted">in</span></div></div>
+            <label class="field"><span>Weight (lb)</span><input class="input num" id="w-lb" type="number" inputmode="decimal" min="60" max="700" value="${Math.round(p.weightKg * 2.20462)}"></label>`
+            : `<label class="field"><span>Height (cm)</span><input class="input num" id="w-cm" type="number" inputmode="numeric" min="120" max="230" value="${Math.round(p.heightCm)}"></label>
+            <label class="field"><span>Weight (kg)</span><input class="input num" id="w-kg" type="number" inputmode="decimal" min="30" max="320" value="${Math.round(p.weightKg)}"></label>`}
+        </div>
+        <button type="button" class="btn ghost small" style="align-self:flex-start" data-action="welcome-units">${us ? 'Use kg and cm' : 'Use lb and ft'}</button>
+        ${err}
+        <div class="row" style="justify-content:space-between"><button class="btn ghost" data-action="welcome-skip-profile">Skip, use typical values</button><button class="btn primary" data-action="welcome-next">Next</button></div>
+      </div>` };
+    }
+    if (sh.step === 2) {
+      return { title: 'Your goal', body: `<div class="portion-pane">
+        ${welcomeSteps(2)}
+        <div class="w-choices" role="radiogroup" aria-label="Goal">${NL.GOALS.map((g) => `<button type="button" class="w-choice" role="radio" aria-checked="${p.goal === g.key}" data-action="welcome-goal" data-goal="${g.key}"><b>${esc(g.name.split(' (')[0])}</b>${g.name.includes('(') ? `<span>${esc(g.name.split(' (')[1].replace(')', ''))}</span>` : ''}</button>`).join('')}</div>
+        <label class="field"><span>How active are you?</span><select class="input" id="w-activity">${NL.ACTIVITY.map((a) => `<option value="${a.key}" ${a.key === p.activity ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
+        <div id="w-targets">${welcomeTargetsHTML()}</div>
+        <div class="row" style="justify-content:space-between"><button class="btn ghost" data-action="welcome-back">Back</button><button class="btn primary" data-action="welcome-next">Next</button></div>
+      </div>` };
+    }
+    // Step 3: first meal
+    const parsed = sh.parsed;
+    const ok = parsed ? parsed.items.filter((x) => x.food) : [];
+    const preview = parsed ? (ok.length
+      ? `<ul class="list-plain">${ok.map((it) => `<li><span>${esc(it.food.name)} <span class="small muted">${fmt(it.qty)} × ${esc(it.portions[it.unitIdx].label)}</span></span><span class="num">${fmt(kcalOf(it.food, it.qty * it.portions[it.unitIdx].grams))} kcal</span></li>`).join('')}</ul>
+         ${parsed.items.length > ok.length ? `<p class="small muted" style="margin:0">Couldn't match: ${parsed.items.filter((x) => !x.food).map((x) => '“' + esc(x.text) + '”').join(', ')}. You can add those from search later.</p>` : ''}
+         <div class="row" style="justify-content:space-between"><button class="btn ghost" data-action="welcome-edit-meal">Change it</button><button class="btn primary" data-action="welcome-add-meal">Add to my log</button></div>`
+      : `<p class="small" style="color:var(--low);margin:0">No foods found in that. Try something like “2 eggs and toast”.</p>`) : '';
+    return { title: 'Your first meal', body: `<div class="portion-pane">
+      ${welcomeSteps(3)}
+      <p class="muted" style="margin:0">What did you last eat? Type it the way you'd say it.</p>
+      <textarea class="input" id="w-meal-text" rows="2" placeholder="2 eggs and a slice of toast" data-autofocus>${esc(sh.mealText)}</textarea>
+      <div class="row">${MEAL_EXAMPLES.map((x) => `<button type="button" class="chip" data-action="welcome-example-meal" data-text="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+      <div class="row"><select class="input" id="w-meal" style="width:auto" aria-label="Meal">${NL.MEALS.map((m) => `<option value="${m.key}" ${m.key === sh.meal ? 'selected' : ''}>${m.name}</option>`).join('')}</select>${parsed && ok.length ? '' : `<button class="btn accent" data-action="welcome-read">Find foods</button>`}</div>
+      ${preview}
+      <div class="row" style="justify-content:space-between"><button class="btn ghost" data-action="welcome-back">Back</button><button class="btn ghost" data-action="welcome-finish">Skip, I'll log later</button></div>
+    </div>` };
+  }
+  document.addEventListener('click', (ev) => {
+    const a = ev.target.closest('[data-action^="welcome-"]');
+    if (!a || !S.sheet || S.sheet.type !== 'welcome') return;
+    const sh = S.sheet;
+    const p = S.data.profile;
+    const keepTyped = () => { if (sh.step === 1) { const e = readWelcomeProfile(); if (e) return e; } return ''; };
+    switch (a.dataset.action) {
+      case 'welcome-start': sh.step = 1; renderSheet(); return;
+      case 'welcome-example':
+        S.data.entries = S.data.entries.concat(NL.sampleEntries(db, S.today, 70));
+        S.data.sample = true;
+        S.data.onboarded = false; // "Start my own log" brings them back here
+        S.sheet = null;
+        commit();
+        return;
+      case 'welcome-sex': keepTyped(); p.sex = a.dataset.sex; sh.error = ''; renderSheet(); return;
+      case 'welcome-units': keepTyped(); S.data.settings.units = S.data.settings.units === 'us' ? 'metric' : 'us'; sh.error = ''; renderSheet(); return;
+      case 'welcome-skip-profile': Object.assign(p, { age: NL.DEFAULT_PROFILE.age, heightCm: NL.DEFAULT_PROFILE.heightCm, weightKg: NL.DEFAULT_PROFILE.weightKg }); sh.step = 2; sh.error = ''; save(); reindex(); renderSheet(); return;
+      case 'welcome-next': {
+        if (sh.step === 1) {
+          const e = readWelcomeProfile();
+          if (e) { sh.error = e; renderSheet(); return; }
+        }
+        sh.error = '';
+        sh.step += 1;
+        save(); reindex();
+        renderSheet();
+        return;
+      }
+      case 'welcome-back': sh.step = Math.max(1, sh.step - 1); sh.error = ''; renderSheet(); return;
+      case 'welcome-goal':
+        p.goal = a.dataset.goal;
+        for (const b of document.querySelectorAll('.w-choice')) b.setAttribute('aria-checked', String(b.dataset.goal === p.goal));
+        document.getElementById('w-targets').innerHTML = welcomeTargetsHTML();
+        return;
+      case 'welcome-example-meal': sh.mealText = a.dataset.text; sh.parsed = null; renderSheet(); return;
+      case 'welcome-read': {
+        const el = document.getElementById('w-meal-text');
+        sh.mealText = el ? el.value : sh.mealText;
+        sh.meal = document.getElementById('w-meal').value;
+        sh.parsed = sh.mealText.trim() ? buildParsed(sh.mealText, sh.meal) : { items: [] };
+        renderSheet();
+        return;
+      }
+      case 'welcome-edit-meal': sh.parsed = null; renderSheet(); return;
+      case 'welcome-add-meal': {
+        const meal = (document.getElementById('w-meal') || {}).value || sh.meal;
+        const ok = sh.parsed.items.filter((x) => x.food && x.qty > 0);
+        for (const it of ok) addEntry(S.today, meal, it.food, it.qty, it.portions[it.unitIdx]);
+        finishWelcome(`Logged ${ok.length} food${ok.length === 1 ? '' : 's'}. Here's your day so far.`);
+        return;
+      }
+      case 'welcome-finish': finishWelcome("You're set. Log your meals here whenever you like."); return;
+      default:
+    }
+  });
+  document.addEventListener('change', (ev) => {
+    if (ev.target.id === 'w-activity' && S.sheet && S.sheet.type === 'welcome') {
+      S.data.profile.activity = ev.target.value;
+      document.getElementById('w-targets').innerHTML = welcomeTargetsHTML();
+    }
+    if (ev.target.id === 'w-meal' && S.sheet && S.sheet.type === 'welcome') S.sheet.meal = ev.target.value;
+  });
+  document.addEventListener('input', (ev) => {
+    if (ev.target.id === 'w-meal-text' && S.sheet && S.sheet.type === 'welcome') { S.sheet.mealText = ev.target.value; if (S.sheet.parsed) { S.sheet.parsed = null; } }
+  });
+
+  // ---------------------------------------------------------------------------
   // Installable app (PWA): service worker, update notice, install tips.
   // Only on the hosted site (config.js present); the claude.ai version can't install.
   // ---------------------------------------------------------------------------
@@ -1530,7 +1705,7 @@
   }
   /** iPhone/iPad Safari can only install from the Share menu, so explain it; Chrome/Android get a button. */
   function installTipHTML() {
-    if (!CFG || PWA.standalone || installDismissed() || (S.data && S.data.sample)) return '';
+    if (!CFG || PWA.standalone || installDismissed() || (S.data && (S.data.sample || S.data.onboarded === false))) return '';
     const icon = `<img src="/apple-touch-icon.png" alt="">`;
     const later = `<button class="btn small ghost" data-action="install-dismiss">Not now</button>`;
     if (PWA.deferred) {
@@ -1601,12 +1776,15 @@
       $('#main').innerHTML = `<div class="card"><h2>The food database didn't load</h2><p>${esc(e.message)}. Reload the page to try again. If you opened index.html straight from your disk, serve the folder instead (for example <code>npx serve .</code>), because browsers block local file reads.</p></div>`;
       return;
     }
-    S.data = normalize(load() || freshData(true));
+    const stored = load();
+    S.data = normalize(stored || freshData(false));
+    if (!stored) S.data.onboarded = false; // first visit: guided setup instead of a blank log
     save();
     reindex();
     render();
     initAccounts();
     initPWA();
+    if (S.data.onboarded === false && !S.data.sample && !S.user) openWelcome(0);
   }
   window.NutrientLedger = { state: S, get db() { return db; }, get account() { return Acct; } };
   boot();

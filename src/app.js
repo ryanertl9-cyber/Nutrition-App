@@ -279,7 +279,7 @@
       </div>`;
     }).join('');
 
-    return `<div class="today">
+    return `${installTipHTML()}<div class="today">
       <div class="col-score">${score}</div>
       <div class="col-log">${quick}<section class="card" aria-label="Meals" style="margin-top:16px">${meals}</section>
       <p class="foot">Food values: ${esc(db.source)} Targets: National Academies Dietary Reference Intakes and the 2020–2025 Dietary Guidelines. This is a tracking tool, not medical advice.</p></div>
@@ -1511,6 +1511,76 @@
   });
 
   // ---------------------------------------------------------------------------
+  // Installable app (PWA): service worker, update notice, install tips.
+  // Only on the hosted site (config.js present); the claude.ai version can't install.
+  // ---------------------------------------------------------------------------
+  const PWA = { deferred: null, isIOS: false, standalone: false, updating: false };
+  const INSTALL_DISMISS_KEY = 'nutrient-ledger:install-dismissed';
+  function installDismissed() {
+    try { const t = Number(window.localStorage.getItem(INSTALL_DISMISS_KEY) || 0); return Date.now() - t < 30 * 86400000; } catch (e) { return false; }
+  }
+  /** iPhone/iPad Safari can only install from the Share menu, so explain it; Chrome/Android get a button. */
+  function installTipHTML() {
+    if (!CFG || PWA.standalone || installDismissed() || (S.data && S.data.sample)) return '';
+    const icon = `<img src="/apple-touch-icon.png" alt="">`;
+    const later = `<button class="btn small ghost" data-action="install-dismiss">Not now</button>`;
+    if (PWA.deferred) {
+      return `<div class="install">${icon}<div><b>Install Simply Nutrition</b><p>Open it from your home screen like any app. Works offline too.</p></div><div class="row">${later}<button class="btn small primary" data-action="install-app">Install</button></div></div>`;
+    }
+    if (PWA.isIOS) {
+      const share = `<svg class="share" viewBox="0 0 24 24" aria-label="Share" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg>`;
+      return `<div class="install">${icon}<div><b>Add Simply Nutrition to your home screen</b><p>In Safari, tap ${share} Share, then <b>Add to Home Screen</b>. It opens full-screen and works offline.</p></div><div class="row">${later}</div></div>`;
+    }
+    return '';
+  }
+  function showUpdateBar(reg) {
+    if (document.querySelector('.updatebar')) return;
+    const bar = document.createElement('div');
+    bar.className = 'updatebar';
+    bar.setAttribute('role', 'status');
+    bar.innerHTML = '<span>A new version is ready.</span><button class="btn small" data-action="apply-update">Refresh</button>';
+    document.body.appendChild(bar);
+    bar.querySelector('button').addEventListener('click', () => { PWA.updating = true; if (reg.waiting) reg.waiting.postMessage('skip-waiting'); });
+  }
+  function initPWA() {
+    const ua = navigator.userAgent || '';
+    PWA.isIOS = /iPhone|iPad|iPod/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    PWA.standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); PWA.deferred = e; if (S.tab === 'today') render(); });
+    window.addEventListener('appinstalled', () => { PWA.deferred = null; PWA.standalone = true; render(); toast('Installed. Open it from your home screen.'); });
+    if (!CFG || !('serviceWorker' in navigator)) return;
+    let reloading = false;
+    // Reload only when the person chose to update; the first install takes over silently.
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (!PWA.updating || reloading) return; reloading = true; window.location.reload(); });
+    navigator.serviceWorker.register('/sw.js').then((reg) => {
+      // A newer version already downloaded and waiting (only when an older one is running this page).
+      if (reg.waiting && navigator.serviceWorker.controller) showUpdateBar(reg);
+      reg.addEventListener('updatefound', () => {
+        const w = reg.installing;
+        if (!w) return;
+        w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) showUpdateBar(reg); });
+      });
+      // Check for a new version when the app comes back to the foreground.
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+    }).catch(() => { /* offline support unavailable; the app still works online */ });
+  }
+  document.addEventListener('click', async (ev) => {
+    const a = ev.target.closest('[data-action="install-app"], [data-action="install-dismiss"]');
+    if (!a) return;
+    if (a.dataset.action === 'install-dismiss') {
+      try { window.localStorage.setItem(INSTALL_DISMISS_KEY, String(Date.now())); } catch (e) { /* ignore */ }
+      render();
+      return;
+    }
+    if (PWA.deferred) {
+      PWA.deferred.prompt();
+      try { await PWA.deferred.userChoice; } catch (e) { /* ignore */ }
+      PWA.deferred = null;
+      render();
+    }
+  });
+
+  // ---------------------------------------------------------------------------
   // Boot
   // ---------------------------------------------------------------------------
   async function boot() {
@@ -1527,6 +1597,7 @@
     reindex();
     render();
     initAccounts();
+    initPWA();
   }
   window.NutrientLedger = { state: S, get db() { return db; }, get account() { return Acct; } };
   boot();

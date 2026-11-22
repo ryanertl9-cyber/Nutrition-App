@@ -44,7 +44,7 @@ async function until(fn, ms = 20000) {
   const browser = await chromium.launch({ proxy });
   const errors = [];
   async function device(name) {
-    const ctx = await browser.newContext({ viewport: { width: 1200, height: 900 } });
+    const ctx = await browser.newContext({ viewport: { width: 1200, height: 900 }, serviceWorkers: 'block' });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     ctx.setDefaultTimeout(20000);
     const page = await ctx.newPage();

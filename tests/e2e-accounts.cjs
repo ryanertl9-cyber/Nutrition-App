@@ -43,7 +43,7 @@ async function until(fn, ms = 8000) {
   const browser = await chromium.launch();
   const errors = [];
   async function device(name) {
-    const ctx = await browser.newContext({ viewport: { width: 1200, height: 900 } });
+    const ctx = await browser.newContext({ viewport: { width: 1200, height: 900 }, serviceWorkers: 'block' }); // offline caching is covered by e2e-pwa
     await ctx.route('**/src/vendor/supabase-*.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: FAKE_CLIENT }));
     await ctx.exposeBinding('__fakeSupabase', async (_src, op, args) => (failNetwork && op === 'query' ? { error: 'Failed to fetch' } : fake.handle(op, args)));
     ctx.setDefaultTimeout(10000);

@@ -8,6 +8,12 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/assets/brand/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Simply Nutrition">
 <!-- ARTIFACT-START -->
 <title>Simply Nutrition</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -314,6 +320,16 @@ body::before { background: var(--bg); }
 .score .score-title h2, .score .bigcount { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-stretch: normal; letter-spacing: -.02em; }
 .score .seg button[aria-pressed="true"] { background: #111111; color: #ffffff; }
 .score .nrow:hover { background: #f2f2f5; }
+
+/* Install tip and update bar */
+.install { display: flex; gap: 14px; align-items: center; background: var(--surface); border: 1px solid rgb(167 139 250 / 35%); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; }
+.install img { width: 44px; height: 44px; border-radius: 10px; flex: none; }
+.install p { margin: 2px 0 0; color: var(--muted); font-size: .88rem; }
+.install .share { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: -0.15em; }
+.install .row { margin-left: auto; flex-wrap: nowrap; }
+@media (max-width: 520px) { .install { flex-wrap: wrap; } .install .row { margin-left: 0; } }
+.updatebar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; gap: 12px; align-items: center; background: var(--white); color: #000; border-radius: 999px; padding: 8px 8px 8px 18px; font-weight: 600; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
+.updatebar .btn { background: #000; color: #fff; border-color: #000; }
 </style>
 <!-- ARTIFACT-HEAD-END -->
 </head>

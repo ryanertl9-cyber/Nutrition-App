@@ -2,6 +2,8 @@
 [build]
   publish = "."
   command = ""
+  # Skip the deploy (and its credits) when nothing the site serves has changed.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':(exclude)tests' ':(exclude)docs' ':(exclude)scripts' ':(exclude)supabase' ':(exclude)vendor' ':(exclude)README.md' ':(exclude)package.json' ':(exclude).gitignore'"
 
 [[headers]]
   for = "/*"

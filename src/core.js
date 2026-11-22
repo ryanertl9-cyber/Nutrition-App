@@ -261,7 +261,7 @@
 
   // Whole-query or phrase rewrites, applied before matching. Keys are lowercase phrases.
   const SYNONYMS = [
-    [/\b(ny|new york|kansas city) strip( steak)?\b|\bstrip steak\b/g, 'beef short loin top loin steak'],
+    [/\b(ny|new york|kansas city) strip( steak)?\b|\bstrip steak\b/g, 'beef steak strip'],
     [/\bfilet mignon\b|\bfillet mignon\b/g, 'beef tenderloin steak'],
     [/\brib[\s-]?eye( steak)?\b/g, 'beef rib eye'],
     [/\bt[\s-]?bone( steak)?\b/g, 'beef tbone steak'],
@@ -272,9 +272,13 @@
     [/\bbrisket\b/g, 'beef brisket'],
     [/\bshort ?ribs?\b/g, 'beef shortribs'],
     [/\boj\b/g, 'orange juice'],
+    [/(?<!veggie |turkey |chicken |bean |fish )\bburgers?\b/g, 'hamburger'],
+    [/\b(soda|pop|soft drinks?)\b(?! water)/g, 'soft drink'],
+    [/\bcoke\b|\bpepsi\b/g, 'soft drink cola'],
+    [/\bdiet coke\b|\bdiet soda\b/g, 'soft drink cola diet'],
     [/\bpb\b/g, 'peanut butter'],
     [/\bevoo\b/g, 'olive oil'],
-    [/\bmac(aroni)? (and|n|&) cheese\b/g, 'macaroni and cheese'],
+    [/\bmac(aroni)? (and|n|&) cheese\b/g, 'macaroni or noodles with cheese'],
     [/\b(french )?fries\b/g, 'potatoes french fried'],
     [/\bbell peppers?\b/g, 'peppers sweet'],
     [/\bgreek yoghurt\b/g, 'greek yogurt'],
@@ -292,14 +296,14 @@
     steak: [['Ribeye', 'ribeye'], ['NY strip', 'ny strip'], ['Filet mignon', 'filet mignon'], ['Sirloin', 'beef top sirloin steak'], ['T-bone', 't-bone'], ['Porterhouse', 'porterhouse'], ['Flank', 'flank steak'], ['Skirt', 'beef outside skirt steak']],
     beef: [['Ground beef', 'ground beef'], ['Steak', 'steak'], ['Rib roast', 'beef rib roast'], ['Brisket', 'beef brisket flat half'], ['Short ribs', 'short ribs'], ['Jerky', 'beef jerky']],
     chicken: [['Breast', 'chicken breast'], ['Thigh', 'chicken thigh'], ['Drumstick', 'chicken drumstick'], ['Wing', 'chicken wing'], ['Ground', 'ground chicken'], ['Nuggets', 'chicken nuggets']],
-    pork: [['Chop', 'pork chop'], ['Tenderloin', 'pork tenderloin'], ['Bacon', 'pork cured bacon cooked'], ['Ham', 'ham sliced'], ['Ground', 'ground pork'], ['Ribs', 'pork spareribs']],
+    pork: [['Chop', 'pork chop'], ['Tenderloin', 'pork tenderloin'], ['Bacon', 'pork cured bacon cooked'], ['Ham', 'ham sliced'], ['Ground', 'ground pork'], ['Ribs', 'pork ribs']],
     cheese: [['Cheddar', 'cheddar'], ['Mozzarella', 'mozzarella'], ['Swiss', 'swiss cheese'], ['Parmesan', 'cheese parmesan grated'], ['Feta', 'feta'], ['Cottage', 'cottage cheese'], ['Cream cheese', 'cream cheese'], ['American', 'cheese pasteurized process american']],
-    bread: [['Whole wheat', 'whole wheat bread'], ['White', 'white bread'], ['Multigrain', 'multi-grain bread'], ['Rye', 'rye bread'], ['Sourdough', 'sourdough'], ['Bagel', 'bagel'], ['English muffin', 'english muffin'], ['Tortilla', 'tortilla']],
+    bread: [['Whole wheat', 'whole wheat bread'], ['White', 'white bread'], ['Multigrain', 'multi-grain bread'], ['Rye', 'rye bread'], ['French / sourdough', 'bread french or vienna'], ['Bagel', 'bagel'], ['English muffin', 'english muffin'], ['Tortilla', 'tortilla']],
     rice: [['White', 'white rice'], ['Brown', 'brown rice'], ['Wild', 'wild rice'], ['Fried', 'fried rice']],
     milk: [['2%', '2% milk'], ['Whole', 'whole milk'], ['Skim', 'skim milk'], ['1%', 'milk lowfat 1%'], ['Almond', 'almond milk'], ['Soy', 'soymilk'], ['Chocolate', 'milk chocolate fluid reduced fat']],
     fish: [['Salmon', 'salmon'], ['Tuna', 'tuna'], ['Cod', 'cod'], ['Tilapia', 'tilapia'], ['Halibut', 'halibut cooked'], ['Trout', 'trout rainbow cooked'], ['Shrimp', 'shrimp']],
-    beans: [['Black', 'black beans'], ['Pinto', 'pinto beans'], ['Kidney', 'kidney beans red cooked'], ['Chickpeas', 'chickpeas'], ['Lentils', 'lentils'], ['Baked', 'beans baked canned plain']],
-    pasta: [['Spaghetti', 'spaghetti'], ['Whole wheat', 'whole-wheat pasta cooked'], ['Macaroni & cheese', 'mac and cheese'], ['Egg noodles', 'egg noodles']],
+    beans: [['Black', 'black beans'], ['Pinto', 'pinto beans'], ['Kidney', 'kidney beans red cooked'], ['Chickpeas', 'chickpeas'], ['Lentils', 'lentils'], ['Baked', 'baked beans']],
+    pasta: [['Spaghetti', 'pasta cooked'], ['Whole wheat', 'whole-wheat pasta cooked'], ['Macaroni & cheese', 'mac and cheese'], ['Egg noodles', 'egg noodles']],
     yogurt: [['Greek, plain', 'greek yogurt plain'], ['Greek, vanilla', 'greek yogurt vanilla'], ['Plain', 'yogurt plain lowfat'], ['Fruit', 'yogurt fruit']],
     potato: [['Baked', 'baked potato'], ['Mashed', 'mashed potatoes'], ['Fries', 'french fries'], ['Sweet potato', 'sweet potato'], ['Hash browns', 'hash brown']],
   };
@@ -314,6 +318,7 @@
     '(pan-)?(broiled|fried|grilled|roasted|braised|stewed|baked|boiled|simmered|steamed|microwaved|poached|scrambled|hard-boiled|pan-browned)',
     'batter', 'flour', 'dry heat', 'moist heat', 'fried in .*', 'grilled .*', 'crumbles', 'patty', 'loaf',
   ].join('|') + ')$', 'i');
+  const COOKED_FIRST_FNDDS = /beef|pork|poultry|chicken|turkey|fish|shellfish|lamb|meat|rice|pasta|beans|grains/i;
   const COOKED_FIRST = new Set(['Poultry', 'Pork', 'Beef', 'Fish & shellfish', 'Lamb, veal & game', 'Legumes', 'Grains & pasta', 'Sausages & deli meats']);
 
   function splitName(name) {
@@ -344,13 +349,31 @@
     return prev[b.length];
   }
 
+  // The usual meaning of common words, as everyday (FNDDS) foods. Checked before ALIASES.
+  const FIRST_CHOICE = {
+    apple: 63101000, banana: 63107010, avocado: 63105010, spinach: 72125100, broccoli: 72201100,
+    egg: 31103010, 'boiled egg': 31103010, 'fried egg': 31105030, salmon: 26137120, tuna: 26155110,
+    chicken: 24123301, 'chicken breast': 24123301, bacon: 22600100, burger: 27510631, hamburger: 27510631,
+    oatmeal: 56203056, porridge: 56203056, milk: 11112110, bread: 51300110, 'whole wheat bread': 51300110,
+    toast: 51300120, 'whole wheat toast': 51300120, rice: 56205008, 'white rice': 56205008, coffee: 92101000,
+    yogurt: 11411420, 'greek yogurt': 11411420, 'orange juice': 61210000, 'potatoes french fried': 71401030,
+    'peanut butter': 42202000, cheddar: 14104100, pasta: 56130000, spaghetti: 56130000, almond: 42100100,
+    'ground beef': 21500100, 'beef ground': 21500100, mozzarella: 14107030, 'white bread': 51101000,
+    'multi grain bread': 51601020, 'multigrain bread': 51601020, 'cheese pasteurized process american': 14410110,
+    'american cheese': 14410110, 'kidney beans red cooked': 41106020, 'kidney bean': 41106020,
+    'yogurt plain lowfat': 11411200, 'greek yogurt plain': 11411420,
+  };
+
   class FoodDB {
     constructor(data) {
       this.source = data.source;
       this.groups = data.groups;
       if (data.nutrients.join() !== KEYS.join()) throw new Error('Food data nutrient order does not match the app');
+      // db: 'sr28' = detailed USDA reference entries; 'fndds' = everyday foods as eaten, with consumer names.
+      // pop: 0-100, how often Americans report eating it (NHANES). link: SR28 entry an FNDDS food is mostly made of.
       this.foods = data.foods.map((f) => ({
         id: f[0], src: 'sr', name: f[1], group: data.groups[f[2]], survey: !!f[3], common: f[4], per100: f[5], portions: f[6],
+        db: f[7] === 1 ? 'fndds' : 'sr28', pop: f[8] || 0, link: f[9] || 0,
       }));
       this.byId = new Map(this.foods.map((f) => [f.id, f]));
       this.families = new Map();
@@ -361,14 +384,30 @@
         f.tokens = tokenize(f.name + ' ' + f.common).concat(joined);
         f.lower = f.name.toLowerCase();
         f.branded = BRAND_RE.test(f.name);
-        const sp = splitName(f.name);
-        f.family = f.group + '|' + sp.family.toLowerCase();
-        f.familyName = sp.family;
-        f.version = sp.version;
+        if (f.db === 'fndds') {
+          // Everyday foods join the family of the SR28 entry they're made from (set below), else stand alone.
+          f.family = 'fndds|' + f.id;
+          f.familyName = f.name;
+          f.version = '';
+        } else {
+          const sp = splitName(f.name);
+          f.family = f.group + '|' + sp.family.toLowerCase();
+          f.familyName = sp.family;
+          f.version = sp.version;
+        }
         f.cooked = /\bcooked\b|\b(broiled|grilled|roasted|braised|stewed|baked|boiled|fried|simmered|steamed|poached|scrambled|hard-boiled)\b/.test(f.lower);
+        for (const t of new Set(f.tokens)) this.vocab.set(t, (this.vocab.get(t) || 0) + 1);
+      }
+      for (const f of this.foods) {
+        if (f.db === 'fndds' && f.link && this.byId.has(f.link)) {
+          const sr = this.byId.get(f.link);
+          f.family = sr.family;
+          // Also findable by the USDA wording of what it's made of ("rib eye" finds "Beef, steak, ribeye").
+          f.ownTokens = f.tokens.length;
+          for (const t of tokenize(sr.familyName)) if (!f.tokens.includes(t)) f.tokens.push(t);
+        }
         if (!this.families.has(f.family)) this.families.set(f.family, []);
         this.families.get(f.family).push(f);
-        for (const t of new Set(f.tokens)) this.vocab.set(t, (this.vocab.get(t) || 0) + 1);
       }
       // Default order of versions inside a family: the most typical version first.
       for (const list of this.families.values()) list.sort((a, b) => this.baseScore(b) - this.baseScore(a));
@@ -378,7 +417,7 @@
     versionsOf(food) { return (food && food.family && this.families.get(food.family)) || (food ? [food] : []); }
     aliasFor(term) {
       const words = tokenize(term).map(singular).join(' ');
-      return ALIASES[words] ? this.get(ALIASES[words]) : null;
+      return (FIRST_CHOICE[words] && this.get(FIRST_CHOICE[words])) || (ALIASES[words] ? this.get(ALIASES[words]) : null);
     }
     /** "Which kind?" choices for broad words like "steak" or "cheese". */
     kindsFor(query) {
@@ -421,7 +460,10 @@
       if (/\blean and fat\b/.test(f.lower)) s += 0.3;
       if (/\btrimmed to 1\/8"/.test(f.lower)) s += 0.2;
       if (/\bwithout salt\b/.test(f.lower)) s += 0.1;
-      s -= f.tokens.length * 0.35;
+      // How often people actually eat it, from the national dietary survey. Everyday foods are already "as eaten".
+      s += (f.pop / 100) * 8;
+      if (f.db === 'fndds') s += COOKED_FIRST_FNDDS.test(f.group) ? 6 : 5; // everyday names beat reference names for the same food
+      s -= (f.ownTokens || f.tokens.length) * 0.35; // shorter names are usually the plain, common food
       return s;
     }
     /**
@@ -439,6 +481,7 @@
       const wantsBaby = q.includes('baby') || q.includes('babyfood');
       const phrase = q.join(' ');
       const best = new Map();
+      const bestEveryday = new Map();
       for (const f of this.foods) {
         let ok = true;
         for (let i = 0; i < q.length && ok; i++) {
@@ -448,15 +491,25 @@
         if (!ok) continue;
         let s = this.baseScore(f);
         if (f.group === 'Baby foods' && wantsBaby) s += 12;
-        if (f.tokens[0].startsWith(qs[0])) s += 6;
+        if (f.tokens[0].startsWith(qs[0])) s += 3;
         if (f.lower.startsWith(phrase)) s += 3;
         for (let i = 0; i < q.length; i++) if (f.tokens.includes(q[i]) || f.tokens.includes(qs[i])) s += 0.8; // whole-word matches beat prefixes
         if (f.familyName.toLowerCase().replace(/[^a-z0-9% ]+/g, ' ').replace(/\s+/g, ' ').trim() === phrase) s += 4;
         if (o.usage && o.usage.get(f.id)) s += Math.min(14, 3 * Math.log2(1 + o.usage.get(f.id)));
-        if (alias && alias.id === f.id) s += 12;
+        if (alias && alias.id === f.id) s += 6; // a nudge toward the usual meaning of a word
+        else if (alias && f.family === alias.family) s += 4;
         const key = o.group ? f.family : f.id;
         const cur = best.get(key);
         if (!cur || s > cur[0] || (s === cur[0] && f.name.length < cur[1].name.length)) best.set(key, [s, f]);
+        if (o.group && f.db === 'fndds') {
+          const ce = bestEveryday.get(key);
+          if (!ce || s > ce[0]) bestEveryday.set(key, [s, f]);
+        }
+      }
+      // Show a family under its everyday name when that version scores close to the best one.
+      for (const [key, e] of bestEveryday) {
+        const b = best.get(key);
+        if (b[1].db !== 'fndds' && e[0] >= b[0] - 4) best.set(key, [b[0], e[1]]);
       }
       const scored = [...best.values()];
       scored.sort((x, y) => y[0] - x[0] || x[1].name.length - y[1].name.length);
@@ -520,7 +573,7 @@
     const seen = new Set();
     const cands = [];
     for (const f of db.foods) {
-      if (!f.survey || f.branded || SUGGEST_EXCLUDE.has(f.group)) continue;
+      if (f.db === 'fndds' || !f.survey || f.branded || SUGGEST_EXCLUDE.has(f.group)) continue;
       if (/\b(crude|dehydrated|powder|dry|dried|unprepared|frozen|flour|pickled|yolk|giblets|liver|variety meats|by-products|sauce|curd cheese|natto|nopales|bran)\b/.test(f.lower)) continue;
       if (/\braw\b/.test(f.lower) && (ANIMAL.has(f.group) || f.group === 'Legumes' || f.group === 'Grains & pasta')) continue;
       if (/\bmature seeds\b/.test(f.lower) && !/\bcooked|canned\b/.test(f.lower)) continue;

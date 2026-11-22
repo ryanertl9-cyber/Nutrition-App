@@ -28,7 +28,7 @@ Design an app that lets users log what they eat. The app works out the macronutr
 
 ### 2. Food input
 - **Input methods:** search with quick add, natural-language entry, recent foods with one-tap re-add, copy yesterday's meal, custom foods from a label, and recipes.
-- **Food data source:** USDA SR28 (8,789 lab-analysed foods, 33 nutrients each) built into the app, plus optional live USDA FoodData Central search using a DEMO_KEY or the user's own key.
+- **Food data source:** USDA SR28 (8,789 lab-analysed foods) and FNDDS 2021–2023 (5,431 everyday foods), 33 nutrients each, built into the app and ranked by NHANES reporting frequency, plus optional live USDA FoodData Central search using a DEMO_KEY or the user's own key.
 - **Portions:** USDA household measures (cup, tbsp, slice, medium, …), grams and ounces. The parser converts cup, tbsp, tsp, ml and fl oz using each food's own household measures.
 - **Unknown nutrient data:** kept as unknown, never zero. Affected rows show "partial data", and the detail view says the true total is probably higher.
 

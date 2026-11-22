@@ -494,7 +494,7 @@
         </section>
         <section class="card">
           <h2 style="margin-bottom:8px">Online USDA search</h2>
-          <p class="small muted" style="margin-top:0">The built-in database has 8,789 USDA foods and works offline. Online search adds about 400,000 more foods, including branded products, from USDA FoodData Central. It uses the shared demo key (about 30 searches an hour) unless you add your own free key from api.data.gov.</p>
+          <p class="small muted" style="margin-top:0">The built-in database has 14,220 USDA foods, including 5,431 everyday foods ranked by how often Americans eat them, and works offline. Online search adds about 400,000 more foods, including branded products, from USDA FoodData Central. It uses the shared demo key (about 30 searches an hour) unless you add your own free key from api.data.gov.</p>
           <label class="field"><span>Your api.data.gov key (optional)</span><input class="input" id="api-key" type="text" autocomplete="off" spellcheck="false" value="${esc(S.data.settings.apiKey || '')}" placeholder="DEMO_KEY"></label>
           <p class="small muted" style="margin-bottom:0">Get a key at <a href="https://fdc.nal.usda.gov/api-key-signup" target="_blank" rel="noopener">fdc.nal.usda.gov/api-key-signup</a>. It's saved only in this browser.</p>
         </section>
@@ -610,7 +610,8 @@
     if (f.src !== 'sr') return '';
     const vs = db.versionsOf(f);
     if (vs.length < 2) return f.version ? `<p class="small muted" style="margin:0">${esc(versionLabel(f.version))}</p>` : '';
-    return `<label class="field"><span>Version (${vs.length})</span><select class="input" id="pp-version">${vs.map((v) => `<option value="${v.id}" ${v.id === f.id ? 'selected' : ''}>${esc(versionLabel(v.version) || 'Standard')} · ${fmt(v.per100[0])} kcal/100 g</option>`).join('')}</select></label>`;
+    const label = (v) => (v.db === 'fndds' ? v.name : `USDA detail: ${versionLabel(v.version) || 'standard'}`);
+    return `<label class="field"><span>Version (${vs.length})</span><select class="input" id="pp-version">${vs.map((v) => `<option value="${v.id}" ${v.id === f.id ? 'selected' : ''}>${esc(label(v))} · ${fmt(v.per100[0])} kcal/100 g</option>`).join('')}</select></label>`;
   }
   function portionPaneHTML() {
     const sel = S.sheet.selected;

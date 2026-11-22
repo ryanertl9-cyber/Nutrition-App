@@ -6,7 +6,7 @@ A nutrition tracker that shows at a glance which of your daily nutrient targets 
 - **Gap closer.** Tap a nutrient to see which foods it came from, and which everyday foods would close the gap. Each suggestion can be added with one tap.
 - **Target map.** A heatmap of every nutrient by day (or week), with a days-on-target ranking and plain-language insights.
 - **Fast logging.** Type "2 eggs, 1 cup oatmeal and a banana". Re-add recent foods in one tap, copy yesterday's meal, and save recipes and custom foods.
-- **Trustworthy data.** Lab-analysed USDA values (SR28, 8,789 foods), with optional live search of USDA FoodData Central. Unknown values are flagged, never counted as zero.
+- **Trustworthy data.** 14,220 built-in USDA foods: 8,789 lab-analysed reference foods (SR28) plus 5,431 everyday foods as eaten (FNDDS 2021–2023), ranked by how often Americans report eating them (CDC NHANES 2021–2023). Optional live search of USDA FoodData Central. Unknown values are flagged, never counted as zero.
 - **Accounts and sync.** Use it as a guest (data stays in the browser) or create a free account (email and password) to sync your log across devices. Accounts run on Supabase with row-level security, so each person can only read their own data.
 - **Private.** No ads, no trackers. Export or delete everything at any time.
 
@@ -110,7 +110,7 @@ privacy.html, terms.html  legal pages (review before launch)
 netlify.toml        hosting config and security headers
 data/foods.json     USDA SR28 compiled by scripts/build-foods.mjs from vendor/sr28/*.txt
 tests/              node:test unit tests + Playwright end-to-end script
-scripts/            build-foods.mjs (data), build-artifact.mjs (claude.ai Artifact page)
+scripts/            extract-fndds.py (slims FNDDS + NHANES downloads into vendor/fndds), build-foods.mjs (data), build-artifact.mjs (claude.ai Artifact page)
 ```
 
 There are no runtime dependencies. Online search calls `api.nal.usda.gov/fdc/v1/foods/search` directly from the browser. (api.data.gov is documented to accept browser requests, but this path was only tested against a mocked response, because the build environment couldn't reach USDA.) On hosts that block outside requests, including the claude.ai Artifact viewer, online search shows a clear message and the built-in database keeps working.
@@ -133,6 +133,7 @@ There are no runtime dependencies. Online search calls `api.nal.usda.gov/fdc/v1/
 
 ## Data and licenses
 
-- Food composition: U.S. Department of Agriculture, Agricultural Research Service, Nutrient Data Laboratory, *USDA National Nutrient Database for Standard Reference, Release 28* (2015). This is a public-domain U.S. government work. The raw files in `vendor/sr28` come from the MIT-licensed `fda-nutrient-database` npm package.
+- Food composition: U.S. Department of Agriculture, Agricultural Research Service, Nutrient Data Laboratory, *USDA National Nutrient Database for Standard Reference, Release 28* (2015), and USDA ARS Food Surveys Research Group, *Food and Nutrient Database for Dietary Studies 2021–2023*. Pantothenic acid and manganese for FNDDS foods are estimated from their SR28 ingredients when those cover at least 90% of the weight.
+- Popularity: CDC National Center for Health Statistics, *NHANES 2021–2023* dietary interview, individual foods (days 1 and 2), survey-weighted report counts. This is a public-domain U.S. government work. The raw files in `vendor/sr28` come from the MIT-licensed `fda-nutrient-database` npm package.
 - Online search: USDA FoodData Central API (public domain data; free api.data.gov key).
 - App code: MIT.

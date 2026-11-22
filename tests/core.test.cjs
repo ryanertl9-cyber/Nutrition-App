@@ -8,7 +8,8 @@ const db = new NL.FoodDB(require(path.join(__dirname, '../data/foods.json')));
 const close = (a, b, tol = 0.01) => assert.ok(Math.abs(a - b) <= tol * Math.max(1, Math.abs(b)), `${a} ≉ ${b}`);
 
 test('database loads every SR28 food with the app nutrient order', () => {
-  assert.equal(db.foods.length, 8789);
+  assert.equal(db.foods.filter((f) => f.db === 'sr28').length, 8789);
+  assert.equal(db.foods.filter((f) => f.db === 'fndds').length, 5431);
   const banana = db.get(9040);
   assert.equal(banana.name, 'Bananas, raw');
   assert.equal(banana.per100[NL.BY_KEY.kcal.index], 89);
@@ -27,10 +28,13 @@ test('missing lab values stay null instead of becoming zero', () => {
 
 test('search puts the everyday food first', () => {
   const top = (q) => db.search(q, { limit: 1 })[0].name;
-  assert.equal(top('banana'), 'Bananas, raw');
-  assert.equal(top('eggs'), 'Egg, whole, cooked, hard-boiled');
-  assert.equal(top('greek yogurt'), 'Yogurt, Greek, plain, nonfat');
-  assert.match(top('chicken breast'), /^Chicken, broilers or fryers, breast, meat only, cooked/);
+  assert.equal(top('banana'), 'Banana, raw');
+  assert.equal(top('eggs'), 'Egg, whole, boiled or poached');
+  assert.match(top('greek yogurt'), /^Yogurt, Greek/);
+  assert.match(top('chicken breast'), /^Chicken breast, grilled/);
+  assert.equal(top('coffee'), 'Coffee, brewed');
+  assert.equal(top('apple'), 'Apple, raw');
+  assert.equal(top('burger'), 'Hamburger, on white bun, 1 medium patty');
   assert.equal(db.search('zzzz').length, 0);
 });
 
@@ -105,14 +109,14 @@ test('parseAmount handles digits, fractions, unicode and words', () => {
 
 test('parseMeal turns a sentence into foods and grams', () => {
   const items = NL.parseMeal('2 eggs, 1 cup oatmeal and a banana; 8 oz salmon + 2 tbsp peanut butter, 100g rice', db);
-  const got = items.map((i) => [i.food && i.food.id, i.grams]);
+  const got = items.map((i) => [i.food && i.food.name, i.grams]);
   assert.deepEqual(got, [
-    [1129, 100], // 2 × 1 large (50 g)
-    [8121, 234], // 1 cup cooked oatmeal
-    [9040, 118], // 1 medium banana
-    [15237, 226.8], // 8 oz
-    [16098, 32], // 2 tbsp = 32 g
-    [20045, 100],
+    ['Egg, whole, boiled or poached', 100], // 2 × 1 egg (50 g)
+    ['Oatmeal', 240], // 1 cup
+    ['Banana, raw', 126], // 1 banana
+    ['Fish, salmon, baked or broiled', 226.8], // 8 oz
+    ['Peanut butter', 30], // 2 tbsp
+    ['Rice, white, cooked, no added fat', 100],
   ]);
 });
 
@@ -224,11 +228,12 @@ test('sample data is deterministic and leaves today in progress', () => {
 
 test('everyday steak names find the right beef cut', () => {
   const top = (q) => db.search(q, { limit: 1 })[0];
-  assert.match(top('ny strip').name, /^Beef, short loin, top loin/);
-  assert.match(top('new york strip steak').name, /^Beef, short loin, top loin/);
+  assert.match(top('ny strip').name, /^Beef, steak, strip/);
+  assert.match(top('new york strip steak').name, /^Beef, steak, strip/);
   assert.match(top('filet mignon').name, /tenderloin/);
-  assert.match(top('ribeye').name, /^Beef, rib eye/);
-  assert.match(top('t-bone').name, /t-bone steak/);
+  assert.match(top('ribeye').name, /^Beef, steak, ribeye/);
+  assert.match(top('t-bone').name, /T-bone/i);
+  assert.ok(db.versionsOf(top('ribeye')).some((v) => v.db === 'sr28'), 'detailed USDA cuts are versions of the everyday ribeye');
   assert.match(top('sirloin').name, /^Beef/);
   assert.match(top('pork sirloin').name, /^Pork/, 'naming another animal keeps it');
   assert.match(top('oj').name, /^Orange juice/);
@@ -246,7 +251,8 @@ test('versions of one food collapse into a single result', () => {
 
 test('meat defaults to a cooked version', () => {
   for (const q of ['ribeye', 'chicken thigh', 'salmon', 'bacon', 'pork chop']) {
-    assert.ok(db.search(q, { limit: 1 })[0].cooked, q);
+    const f = db.search(q, { limit: 1 })[0];
+    assert.ok(f.cooked || f.db === 'fndds', q); // everyday foods are as eaten
   }
 });
 
@@ -259,9 +265,9 @@ test('broad words offer "which kind?" choices that all find food', () => {
 });
 
 test('typos are corrected, nonsense is not', () => {
-  assert.equal(db.search('brocoli', { limit: 1 })[0].familyName, 'Broccoli');
-  assert.equal(db.search('bannana', { limit: 1 })[0].name, 'Bananas, raw');
-  assert.match(db.search('chiken breast', { limit: 1 })[0].name, /^Chicken, broilers or fryers, breast/);
+  assert.match(db.search('brocoli', { limit: 1 })[0].name, /^Broccoli/);
+  assert.equal(db.search('bannana', { limit: 1 })[0].name, 'Banana, raw');
+  assert.match(db.search('chiken breast', { limit: 1 })[0].name, /^Chicken breast/);
   assert.equal(db.search('qwertyfood').length, 0);
 });
 
@@ -275,4 +281,18 @@ test('gap suggestions skip organ meats', () => {
   for (const key of ['vitA', 'b12', 'iron', 'copper']) {
     for (const s of NL.suggestFoods(db, key, 500)) assert.doesNotMatch(s.food.name, /liver|variety meats|giblets/i, key);
   }
+});
+
+test('popular foods rank above rare ones', () => {
+  const water = db.search('water', { limit: 3 }).map((f) => f.name);
+  assert.ok(water.includes('Water, tap') || water.includes('Water, bottled, plain'));
+  assert.ok(db.get(63107010).pop > 50);
+});
+
+test('everyday foods fill pantothenic acid and manganese from ingredients, or leave them unknown', () => {
+  const PI = NL.BY_KEY.panto.index, MI = NL.BY_KEY.manganese.index;
+  assert.ok(db.get(63107010).per100[MI] > 0, 'banana manganese estimated');
+  const fn = db.foods.filter((f) => f.db === 'fndds');
+  assert.ok(fn.every((f) => f.per100[MI] === null || f.per100[MI] >= 0));
+  assert.ok(fn.some((f) => f.per100[PI] === null), 'some stay unknown rather than zero');
 });

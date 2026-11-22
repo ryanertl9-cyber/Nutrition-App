@@ -89,14 +89,23 @@ async function step(name, fn) {
     await page.click('[data-action="parsed-add"]');
     const es = await todayEntries();
     assert.equal(es.length, 3);
-    assert.deepEqual(es.map((e) => e.fid), [1129, 8121, 9040]);
+    const names = es.map((e) => e.name);
+    assert.match(names[0], /^Egg, whole/);
+    assert.match(names[1], /^Oatmeal/);
+    assert.match(names[2], /^Banana/);
     assert.ok(es.every((e) => e.meal === 'breakfast'));
     assert.equal(es[0].grams, 100);
   });
 
   await step('scoreboard reflects logged food', async () => {
     const kcal = await page.textContent('.energy .kcal');
-    assert.equal(kcal.trim(), String(Math.round(155 + 0.71 * 234 + 89 * 1.18)));
+    // Expected total computed from the same database the page uses.
+    const expected = await page.evaluate(() => {
+      const s = window.NutrientLedger.state, db = window.NutrientLedger.db;
+      return Math.round(s.data.entries.filter((e) => e.date === s.date).reduce((a, e) => a + (db.get(e.fid).per100[0] * e.grams) / 100, 0));
+    });
+    assert.ok(expected > 200);
+    assert.equal(kcal.trim().replace(/,/g, ''), String(expected));
   });
 
   await step('search sheet adds a food with a chosen portion', async () => {
@@ -110,7 +119,7 @@ async function step(name, fn) {
     await page.click('[data-action="confirm-add"]');
     const lunch = (await todayEntries()).filter((e) => e.meal === 'lunch');
     assert.equal(lunch.length, 1);
-    assert.equal(lunch[0].fid, 15237);
+    assert.match(lunch[0].name, /salmon/i);
     assert.equal(lunch[0].grams, 170.1);
   });
 
@@ -118,9 +127,9 @@ async function step(name, fn) {
     await page.click('[data-action="open-add"][data-meal="dinner"]');
     await page.fill('#add-q', 'steak');
     await page.waitForSelector('.kinds [data-action="kind"]');
-    await page.click('.kinds [data-action="kind"] >> text=NY strip');
-    assert.equal(await page.inputValue('#add-q'), 'ny strip');
-    assert.match(await page.textContent('#add-results .result >> nth=0'), /top loin/);
+    await page.click('.kinds [data-action="kind"] >> text=Ribeye');
+    assert.equal(await page.inputValue('#add-q'), 'ribeye');
+    assert.match(await page.textContent('#add-results .result >> nth=0'), /ribeye/i);
     assert.match(await page.textContent('#add-results .result >> nth=0'), /versions/);
     await page.click('#add-results [data-action="pick"] >> nth=0');
     const opts = await page.locator('#pp-version option').count();
@@ -134,7 +143,7 @@ async function step(name, fn) {
   });
 
   await step('editing an entry changes its amount', async () => {
-    await page.click('.entry .name >> text=Fish, salmon');
+    await page.click('.entry .name >> text=/salmon/i');
     await page.fill('#pp-qty', '4');
     await page.click('[data-action="confirm-add"]');
     const lunch = (await todayEntries()).filter((e) => e.meal === 'lunch');

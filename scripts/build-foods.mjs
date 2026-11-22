@@ -54,7 +54,7 @@ for (const line of read('FOOD_DES.txt')) {
 }
 
 const round = (v) => {
-  if (v === '' || v === undefined) return null; // unknown, not zero
+  if (v === '' || v === undefined || v === null) return null; // unknown, not zero
   const n = Number(v);
   if (!Number.isFinite(n)) return null;
   if (n === 0) return 0;
@@ -86,12 +86,72 @@ for (const id of Object.keys(EXTRA_PORTIONS)) {
   if (!foods.some((f) => f[0] === Number(id))) throw new Error(`EXTRA_PORTIONS id ${id} not found`);
 }
 
+// ---------------------------------------------------------------------------
+// FNDDS 2021-2023: everyday "as eaten" foods with consumer names, plus how often each was reported eaten
+// in NHANES 2021-2023. Built from vendor/fndds/*.json (see scripts/extract-fndds.py).
+// Row format (all foods): [id, name, group, survey, common, per100[], portions[], db (0 = SR28, 1 = FNDDS), popularity 0-100, linked SR id]
+// ---------------------------------------------------------------------------
+const fndds = JSON.parse(readFileSync(join(root, 'vendor/fndds/fndds.json'), 'utf8'));
+const nhanes = JSON.parse(readFileSync(join(root, 'vendor/fndds/nhanes-counts.json'), 'utf8')).counts;
+if (fndds.nutrients.join() !== KEYS.join()) throw new Error('FNDDS nutrient order does not match');
+const groups = groupCodes.map((c) => GROUPS[c]);
+const srById = new Map(foods.map((f) => [f[0], f]));
+const fnById = new Map(fndds.foods.map((f) => [f.code, f]));
+
+// FNDDS lacks pantothenic acid and manganese: estimate them from the SR ingredients each food is made of,
+// only when ingredients with known values make up at least 90% of the weight.
+const IMPUTE = ['panto', 'manganese'].map((k) => KEYS.indexOf(k));
+function imputed(f, i, depth) {
+  if (f.vals[i] != null) return f.vals[i];
+  if (depth > 3 || !f.ingredients.length) return null;
+  let total = 0, known = 0, sum = 0;
+  for (const [code, w] of f.ingredients) {
+    total += w;
+    const v = srById.has(code) ? srById.get(code)[5][i] : fnById.has(code) ? imputed(fnById.get(code), i, depth + 1) : null;
+    if (v != null) { known += w; sum += (v * w) / 100; }
+  }
+  return total > 0 && known / total >= 0.9 ? (sum / total) * 100 : null;
+}
+
+// Popularity: survey-weighted reports on a log scale, 0-100 (tap water = 100).
+const maxW = Math.max(...Object.values(nhanes).map((c) => c[1]));
+const pop = (code) => {
+  const c = nhanes[String(code)];
+  if (!c || c[1] <= 0) return 0;
+  return Math.max(0, Math.round((100 * (Math.log10(c[1]) - 4)) / (Math.log10(maxW) - 4)));
+};
+
+// Readable names: drop survey jargon such as "NFS" (not further specified) and "NS as to fat eaten".
+function cleanName(n) {
+  return n.split(/,\s*/).filter((p) => !/^(NFS|NS as to .*|NS)$/i.test(p.trim())).join(', ').replace(/\s{2,}/g, ' ').trim();
+}
+
+const srPop = new Map();
+const fnRows = [];
+for (const f of fndds.foods) {
+  const vals = f.vals.slice();
+  for (const i of IMPUTE) vals[i] = round(imputed(f, i, 0));
+  for (let i = 0; i < vals.length; i++) vals[i] = vals[i] == null ? null : round(vals[i]);
+  const total = f.ingredients.reduce((a, x) => a + x[1], 0);
+  const main = f.ingredients.find(([code, w]) => srById.has(code) && total > 0 && w / total >= 0.8);
+  const p = pop(f.code);
+  if (main) srPop.set(main[0], Math.max(srPop.get(main[0]) || 0, p));
+  let gname = /baby|infant formula|formula/i.test(f.category) ? 'Baby foods' : f.category || 'Other';
+  let gi = groups.indexOf(gname);
+  if (gi < 0) { groups.push(gname); gi = groups.length - 1; }
+  const portions = f.portions.map(([g, d]) => [round(g), d]);
+  fnRows.push([f.code, cleanName(f.name), gi, 1, '', vals, portions, 1, p, main ? main[0] : 0]);
+}
+// Detailed SR28 entries borrow some popularity from the everyday foods built on them.
+for (const f of foods) f.push(0, Math.round((srPop.get(f[0]) || 0) * 0.7), 0);
+const all = foods.concat(fnRows);
+
 const out = {
-  source: 'USDA National Nutrient Database for Standard Reference, Release 28 (2015). Values per 100 g; null = not analyzed.',
+  source: 'USDA National Nutrient Database for Standard Reference, Release 28 (2015) and USDA Food and Nutrient Database for Dietary Studies 2021-2023; popularity from CDC NHANES 2021-2023. Values per 100 g; null = not analyzed.',
   nutrients: KEYS,
-  groups: groupCodes.map((c) => GROUPS[c]),
-  foods,
+  groups,
+  foods: all,
 };
 const json = JSON.stringify(out);
 writeFileSync(join(root, 'data/foods.json'), json);
-console.log(`Wrote ${foods.length} foods, ${(json.length / 1024 / 1024).toFixed(2)} MB`);
+console.log(`Wrote ${foods.length} SR28 + ${fnRows.length} FNDDS foods (${fnRows.filter((r) => r[9]).length} linked to an SR28 food), ${(json.length / 1024 / 1024).toFixed(2)} MB`);

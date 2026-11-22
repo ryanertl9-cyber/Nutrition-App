@@ -161,7 +161,7 @@ async function until(fn, ms = 8000) {
     await p1.click('[data-action="sync-now"]');
     await until(async () => (await st(p1)).entries.length === 4);
     await p1.click('[data-action="close-sheet"]');
-    assert.ok(await p1.isVisible('text=Nuts, almonds'));
+    assert.ok(await p1.isVisible('.entry .name >> text=/almonds/i'));
   });
 
   await step('deleting on one device removes it everywhere', async () => {

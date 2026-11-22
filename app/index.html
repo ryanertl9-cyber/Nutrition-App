@@ -13,7 +13,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Public+Sans:ital,wght@0,400..700;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Inter:wght@600&family=Public+Sans:ital,wght@0,400..700;1,400&display=swap">
 <style>
 /* Layout: sticky app bar + tabs; Today is a two-column desk (scoreboard right, logging left) that stacks with the scoreboard first on phones. */
 :root {
@@ -65,9 +65,11 @@ h3 { font-size: .95rem; font-weight: 750; }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--surface); }
 .appbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
 .appbar .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding-block: 10px 0; }
-.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
-.brand h1 { font-size: 1.35rem; font-weight: 900; font-stretch: 75%; letter-spacing: .01em; text-transform: uppercase; }
-.brand .mark { width: 17px; height: 17px; flex: none; position: relative; top: 2px; }
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+/* Wordmark matches the landing page: Inter, medium weight, widely tracked capitals. */
+.brand h1 { font: 600 .95rem/1 "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; font-stretch: normal; letter-spacing: .28em; text-transform: uppercase; }
+@media (max-width: 480px) { .brand h1 { font-size: .82rem; letter-spacing: .2em; } }
+.brand .mark { width: 18px; height: 18px; flex: none; }
 .brand .mark rect { fill: var(--ink); }
 .brand .mark rect.miss { fill: var(--low); }
 .datenav { display: flex; align-items: center; gap: 4px; }

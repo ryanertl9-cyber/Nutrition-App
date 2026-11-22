@@ -253,7 +253,7 @@
         <textarea class="input" id="nl-input" rows="2" placeholder="2 eggs, 1 slice whole wheat toast and a banana">${esc(S.nlText || '')}</textarea>
         <div class="row" style="margin-top:8px">
           <select class="input" id="nl-meal" style="width:auto" aria-label="Meal">${NL.MEALS.map((m) => `<option value="${m.key}" ${m.key === (S.nlMeal || defaultMeal()) ? 'selected' : ''}>${m.name}</option>`).join('')}</select>
-          <button class="btn primary" data-action="nl-parse">Read it</button>
+          <button class="btn accent" data-action="nl-parse">Read it</button>
           <span class="hint">Amounts, units and plain food names: “1 cup oatmeal”, “8 oz salmon”, “a handful of almonds”.</span>
         </div>
         ${S.parsed ? parsedHTML() : ''}

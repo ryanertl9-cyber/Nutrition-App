@@ -13,38 +13,24 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Inter:wght@600&family=Public+Sans:ital,wght@0,400..700;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500..800&family=Inter:wght@400..700&display=swap">
 <style>
 /* Layout: sticky app bar + tabs; Today is a two-column desk (scoreboard right, logging left) that stacks with the scoreboard first on phones. */
 :root {
-  --bg: #f3f5f1; --surface: #ffffff; --sunken: #e9ede7; --ink: #16201b; --muted: #5a6a61; --line: #d5dcd5;
-  --accent: #1f4fd1; --accent-ink: #ffffff; --accent-soft: #e3eaff;
-  --met: #1c8a4a; --near: #b7790a; --low: #cc4a1f; --over: #8a3bbf; --info: #8b978f;
-  --met-soft: #dcf1e4; --near-soft: #f8ecd2; --low-soft: #fbe2d8; --over-soft: #efe1f8;
-  --track: #e3e8e3;
-  --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
-  --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --radius: 10px; --shadow: 0 1px 2px rgb(16 32 24 / 6%), 0 8px 24px rgb(16 32 24 / 6%);
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0e1411; --surface: #161e1a; --sunken: #1c2621; --ink: #e6ede8; --muted: #98a89f; --line: #2b3731;
-    --accent: #86a6ff; --accent-ink: #0b1430; --accent-soft: #1d2a4d;
-    --met: #4cc27f; --near: #e6b03c; --low: #f27a52; --over: #c18af0; --info: #6f7d75;
-    --met-soft: #173827; --near-soft: #3a2f14; --low-soft: #3d2118; --over-soft: #301f40;
-    --track: #24302a; --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0e1411; --surface: #161e1a; --sunken: #1c2621; --ink: #e6ede8; --muted: #98a89f; --line: #2b3731;
-  --accent: #86a6ff; --accent-ink: #0b1430; --accent-soft: #1d2a4d;
-  --met: #4cc27f; --near: #e6b03c; --low: #f27a52; --over: #c18af0; --info: #6f7d75;
-  --met-soft: #173827; --near-soft: #3a2f14; --low-soft: #3d2118; --over-soft: #301f40;
-  --track: #24302a; --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
+  /* Dark, single theme to match the landing page: black, white type and pills, a hint of purple.
+     Status colours: green met, amber close, orange low, pink over (purple is decoration only). */
+  --bg: #000000; --surface: #0d0d0f; --sunken: #17171a; --ink: #f5f5f7; --muted: #8e8e93; --white: #f5f5f7;
+  --line: rgb(255 255 255 / 9%); --line-strong: rgb(255 255 255 / 18%);
+  --accent: #a78bfa; --accent-ink: #0c0618; --accent-soft: rgb(167 139 250 / 15%);
+  --met: #34c77b; --near: #f5b742; --low: #ff6b3d; --over: #ff4d8d; --info: #6e6e73;
+  --met-soft: rgb(52 199 123 / 16%); --near-soft: rgb(245 183 66 / 16%); --low-soft: rgb(255 107 61 / 16%); --over-soft: rgb(255 77 141 / 16%);
+  --track: #26262b;
+  --display: "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --body: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --radius: 18px; --shadow: 0 20px 60px rgb(0 0 0 / 50%);
   color-scheme: dark;
 }
+html { background: var(--bg); }
 
 * { box-sizing: border-box; }
 html, body { min-height: 100%; }
@@ -271,6 +257,63 @@ details summary { cursor: pointer; font-weight: 600; }
   .bigcount { font-size: 2.6rem; }
   .datenav .label { min-width: 7.5em; }
 }
+
+/* ---- Dark modern theme, matching the landing page ---- */
+body { letter-spacing: -.005em; background: var(--bg) radial-gradient(1100px 420px at 85% -140px, rgb(167 139 250 / 18%), transparent 70%) no-repeat; }
+h1, h2, h3 { font-family: var(--display); font-stretch: normal; letter-spacing: -.02em; }
+h2 { font-weight: 700; }
+h3 { font-weight: 650; }
+.eyebrow { font: 600 .68rem/1.2 var(--body); letter-spacing: .2em; }
+a { color: var(--accent); }
+body::before { background: var(--bg); }
+.appbar { background: rgb(0 0 0 / 72%); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom-color: var(--line); }
+.tab { font: 600 .72rem/1 var(--body); letter-spacing: .16em; text-transform: uppercase; padding: 15px 14px 13px; border-bottom-width: 2px; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.datenav .label { font-weight: 600; }
+.btn { border-radius: 999px; background: rgb(255 255 255 / 6%); border-color: var(--line-strong); padding: 8px 16px; }
+.btn:hover { background: rgb(255 255 255 / 12%); border-color: var(--line-strong); }
+.btn.primary { background: var(--white); color: #000; border-color: var(--white); }
+.btn.primary:hover { filter: none; background: #ffffff; }
+.btn.accent { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.accent:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; border-color: transparent; }
+.btn.ghost:hover { background: rgb(255 255 255 / 8%); }
+.btn.small { padding: 5px 12px; }
+.btn.icon { padding: 6px 10px; }
+.input, select.input, textarea.input { background: var(--sunken); border-color: var(--line); border-radius: 12px; }
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.card { background: var(--surface); border-color: var(--line); border-radius: var(--radius); padding: 20px; }
+.banner { background: var(--accent-soft); border-color: rgb(167 139 250 / 45%); border-radius: 16px; }
+.seg { border-radius: 999px; border-color: var(--line-strong); }
+.seg button { background: transparent; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--white); color: #000; }
+.chip { background: var(--sunken); }
+.tile { background: var(--surface); border-color: var(--line); border-radius: var(--radius); }
+.tile .v, .detail-top .big, .energy .kcal { font-family: var(--display); font-stretch: normal; font-weight: 700; letter-spacing: -.02em; }
+.meal-head h3 { font-weight: 700; }
+.result:hover, .entry:hover, .nrow:hover { background: rgb(255 255 255 / 5%); }
+.pitem { background: var(--sunken); border-radius: 14px; }
+.tag { background: rgb(255 255 255 / 7%); }
+.tag.mine, .result .versions { color: var(--accent); }
+.tag.mine { background: var(--accent-soft); }
+.scrim { background: rgb(0 0 0 / 65%); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.sheet { background: #0f0f11; border: 1px solid var(--line); border-radius: 22px 22px 0 0; }
+@media (min-width: 760px) { .sheet { border-radius: 22px; } }
+.preview-grid .p { border-radius: 14px; }
+.toast { background: var(--white); color: #000; border-radius: 999px; }
+
+/* The daily scoreboard is a white Nutrition Facts panel on black, like the label on the landing page. */
+.score {
+  --surface: #ffffff; --sunken: #f2f2f5; --ink: #111111; --muted: #5f5f66; --white: #111111;
+  --line: #d9d9de; --line-strong: #c7c7cc; --track: #e8e8ed; --info: #8e8e93;
+  --met: #1c8a4a; --near: #b7790a; --low: #d4461c; --over: #d1245f;
+  --met-soft: #dcf1e4; --near-soft: #f8ecd2; --low-soft: #fbe2d8; --over-soft: #fbdde7;
+  background: #ffffff; color: #111111; border: 2px solid #111111; border-radius: 6px; color-scheme: light;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 6%), 0 30px 90px rgb(167 139 250 / 16%);
+}
+.score .score-title h2, .score .bigcount { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-stretch: normal; letter-spacing: -.02em; }
+.score .seg button[aria-pressed="true"] { background: #111111; color: #ffffff; }
+.score .nrow:hover { background: #f2f2f5; }
 </style>
 <!-- ARTIFACT-HEAD-END -->
 </head>

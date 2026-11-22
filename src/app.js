@@ -1159,6 +1159,12 @@
     setInterval(() => { if (Acct.engine && document.visibilityState === 'visible') Acct.engine.schedule(0); }, 60000);
     renderAccountButton();
     render();
+    // Links from the landing page: /app/#signin and /app/#signup open the matching form.
+    const m = window.location.hash.match(/^#(signin|signup)$/);
+    if (m) {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      setTimeout(() => { if (!S.user) openSheet({ type: 'auth', mode: m[1], error: '', busy: false }); }, 300);
+    }
   }
 
   async function handleAuth(event, session) {

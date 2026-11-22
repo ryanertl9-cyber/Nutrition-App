@@ -521,7 +521,7 @@
     const cands = [];
     for (const f of db.foods) {
       if (!f.survey || f.branded || SUGGEST_EXCLUDE.has(f.group)) continue;
-      if (/\b(crude|dehydrated|powder|dry|dried|unprepared|frozen|flour|pickled|yolk|giblets|sauce|curd cheese|natto|nopales|bran)\b/.test(f.lower)) continue;
+      if (/\b(crude|dehydrated|powder|dry|dried|unprepared|frozen|flour|pickled|yolk|giblets|liver|variety meats|by-products|sauce|curd cheese|natto|nopales|bran)\b/.test(f.lower)) continue;
       if (/\braw\b/.test(f.lower) && (ANIMAL.has(f.group) || f.group === 'Legumes' || f.group === 'Grains & pasta')) continue;
       if (/\bmature seeds\b/.test(f.lower) && !/\bcooked|canned\b/.test(f.lower)) continue;
       if (/^mollusks|^game meat/.test(f.lower)) continue;

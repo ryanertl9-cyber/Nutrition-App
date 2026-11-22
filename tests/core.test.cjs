@@ -270,3 +270,9 @@ test('splitName separates the food from its version details', () => {
     { family: 'Beef, loin, top loin steak', version: 'boneless, lip off, separable lean only, trimmed to 0" fat, choice, cooked, grilled' });
   assert.deepEqual(NL.splitName('Bananas, raw'), { family: 'Bananas', version: 'raw' });
 });
+
+test('gap suggestions skip organ meats', () => {
+  for (const key of ['vitA', 'b12', 'iron', 'copper']) {
+    for (const s of NL.suggestFoods(db, key, 500)) assert.doesNotMatch(s.food.name, /liver|variety meats|giblets/i, key);
+  }
+});

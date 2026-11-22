@@ -49,7 +49,7 @@ async function until(fn, ms = 20000) {
     ctx.setDefaultTimeout(20000);
     const page = await ctx.newPage();
     page.on('pageerror', (e) => errors.push(`${name}: ${e.message}`));
-    await page.goto(url);
+    await page.goto(url + 'app/');
     await page.waitForSelector('.score');
     await until(() => page.evaluate(() => window.NutrientLedger.account.available));
     return page;

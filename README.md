@@ -20,7 +20,7 @@ Browsers block `fetch()` from `file://` URLs, so serve the folder instead of ope
 npx serve .
 ```
 
-Then open the printed URL. Any static host works, including GitHub Pages (Settings → Pages → deploy from the `main` branch root).
+Then open the printed URL. The landing page is at `/` and the app at `/app/`. Any static host works, including GitHub Pages (Settings → Pages → deploy from the `main` branch root).
 
 ## Accounts setup (Supabase + Netlify)
 
@@ -98,7 +98,8 @@ On the server, each record is a row with `user_id`, `id`, a `data` JSON column, 
 ## Architecture
 
 ```text
-index.html          markup shell + CSS (light/dark tokens)
+index.html          landing page (Nutrition Facts hero); assets/landing.js sends returning users to /app/
+app/index.html      the app: markup shell + CSS (light/dark tokens)
 src/core.js         pure logic: nutrients, DRIs, targets, status, search, parser, trends, insights, FDC mapping
 src/app.js          UI: rendering, events, sheets, storage, export/import, accounts
 src/sync.js         local-first sync engine (diff, pull/merge, batched push) + Supabase adapter

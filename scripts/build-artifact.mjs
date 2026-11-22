@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const html = readFileSync(join(root, 'index.html'), 'utf8');
+const html = readFileSync(join(root, 'app/index.html'), 'utf8');
 const between = (a, b) => {
   const i = html.indexOf(a), j = html.indexOf(b);
   if (i < 0 || j < 0) throw new Error(`Marker missing: ${a} / ${b}`);

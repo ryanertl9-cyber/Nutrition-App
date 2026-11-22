@@ -10,7 +10,7 @@ const ROOT = path.join(__dirname, '..');
 const SHOTS = process.env.SHOTS_DIR || '';
 // Same Content-Security-Policy the live site sends (netlify.toml), so blocked requests fail here too.
 const CSP = fs.readFileSync(path.join(ROOT, 'netlify.toml'), 'utf8').match(/Content-Security-Policy = "([^"]+)"/)[1];
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.webp': 'image/webp' };
 
 function serve() {
   const srv = http.createServer((req, res) => {
@@ -49,7 +49,7 @@ async function step(name, fn) {
   const entryCount = () => page.evaluate(() => window.NutrientLedger.state.data.entries.length);
   const todayEntries = () => page.evaluate(() => { const s = window.NutrientLedger.state; return s.data.entries.filter((e) => e.date === s.date); });
 
-  await page.goto(url);
+  await page.goto(url + 'app/');
   await page.waitForSelector('.score');
 
   await step('first visit opens on example data with a scoreboard', async () => {
@@ -262,13 +262,53 @@ async function step(name, fn) {
 
   await step('no console errors on desktop', async () => { assert.deepEqual(errors, []); });
 
+  // Landing page
+  const land = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const lp = await land.newPage();
+  const landErrors = [];
+  lp.on('pageerror', (e) => landErrors.push(e.message));
+  await step('landing page shows to first-time visitors and links to the app', async () => {
+    await lp.goto(url);
+    assert.equal(new URL(lp.url()).pathname, '/');
+    assert.match(await lp.textContent('h1'), /See which nutrients you hit/);
+    assert.ok(await lp.isVisible('.label'));
+    assert.equal(await lp.getAttribute('.hero .btn.primary', 'href'), '/app/');
+    for (const img of await lp.locator('img').all()) {
+      await img.scrollIntoViewIfNeeded();
+      await lp.waitForFunction((el) => el.complete, await img.elementHandle());
+      assert.ok(await img.evaluate((el) => el.naturalWidth > 0), 'image loads');
+    }
+  });
+  await step('returning users skip the landing page; ?home shows it anyway', async () => {
+    await lp.goto(url + 'app/');
+    await lp.waitForSelector('.score');
+    await lp.click('[data-action="start-own"]');
+    await lp.click('[data-tab="today"]');
+    await lp.fill('#nl-input', 'a banana');
+    await lp.click('[data-action="nl-parse"]');
+    await lp.click('[data-action="parsed-add"]');
+    await lp.goto(url);
+    await lp.waitForURL(/\/app\/$/);
+    await lp.goto(url + '?home');
+    assert.equal(new URL(lp.url()).pathname, '/');
+  });
+  await step('email sign-in links on the landing page are forwarded to the app', async () => {
+    const c2 = await browser.newContext();
+    const p = await c2.newPage();
+    await p.goto(url + '#access_token=abc&type=recovery');
+    await p.waitForURL(/\/app\/#access_token=abc&type=recovery$/);
+    await c2.close();
+  });
+  await step('no errors on the landing page', async () => assert.deepEqual(landErrors, []));
+  await land.close();
+
   // Phone layout + dark theme
   const phone = await browser.newContext(Object.assign({}, devices['iPhone 13'], { colorScheme: 'dark' }));
   await phone.route('**/src/config.js', (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.NL_CONFIG = null;' }));
   const p2 = await phone.newPage();
   const errors2 = [];
   p2.on('pageerror', (e) => errors2.push(e.message));
-  await p2.goto(url);
+  await p2.goto(url + 'app/');
   await p2.waitForSelector('.score');
   for (const tab of ['today', 'trends', 'foods', 'settings']) {
     await step(`phone ${tab}: no sideways page scroll`, async () => {

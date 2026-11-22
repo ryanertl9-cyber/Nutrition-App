@@ -50,7 +50,7 @@ async function until(fn, ms = 8000) {
     const page = await ctx.newPage();
     page.on('pageerror', (e) => errors.push(`${name}: ${e.message}`));
     page.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g|ERR_|Failed to load resource/.test(m.text())) errors.push(`${name}: ${m.text()}`); });
-    await page.goto(url);
+    await page.goto(url + 'app/');
     await page.waitForSelector('.score');
     return { ctx, page };
   }
@@ -262,7 +262,7 @@ async function until(fn, ms = 8000) {
     const code = fake.lastRecoveryCode(A);
     assert.ok(code);
     await p2.goto('about:blank'); // the email link opens a fresh page load
-    await p2.goto(url + '#fake_recovery=' + encodeURIComponent(code));
+    await p2.goto(url + 'app/#fake_recovery=' + encodeURIComponent(code));
     await p2.waitForSelector('form[data-form="newpass"]');
     await p2.fill('#auth-password', 'brand new pass 2');
     await p2.click('form[data-form="newpass"] button[type="submit"]');

@@ -183,3 +183,24 @@ test('concurrent sync calls coalesce instead of running in parallel', async () =
   await Promise.all([a.engine.sync(), a.engine.sync(), a.engine.sync()]);
   assert.equal(maxActive, 1);
 });
+
+test('saved meals sync through the foods table and land back in savedMeals', async () => {
+  const s = makeServer();
+  const a = makeDevice(s);
+  a.data.savedMeals = [{ id: 'meal_1', kind: 'meal', name: 'Usual breakfast', items: [{ src: 'sr', fid: 9040, name: 'Banana', qty: 1, unit: 'banana', unitGrams: 126, grams: 126 }] }];
+  a.data.myFoods.push({ id: 'my_1', src: 'my', kind: 'custom', name: 'Bar', per100: [400], portions: [[40, '1 bar']] });
+  await a.engine.sync();
+  assert.equal(s.tables.foods.get('meal_1').data.kind, 'meal');
+  const b = makeDevice(s);
+  await b.engine.sync();
+  assert.deepEqual(b.data.savedMeals.map((m) => m.name), ['Usual breakfast']);
+  assert.deepEqual(b.data.myFoods.map((f) => f.name), ['Bar'], 'meals do not leak into My foods');
+  b.data.savedMeals[0].name = 'Weekday breakfast';
+  await b.engine.sync();
+  await a.engine.sync();
+  assert.equal(a.data.savedMeals[0].name, 'Weekday breakfast');
+  a.data.savedMeals = [];
+  await a.engine.sync();
+  await b.engine.sync();
+  assert.equal(b.data.savedMeals.length, 0, 'deleting a meal syncs');
+});

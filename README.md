@@ -5,7 +5,7 @@ A nutrition tracker that shows at a glance which of your daily nutrient targets 
 - **Scoreboard first.** "17 of 29 targets met", a status bar, and the short list of nutrients that need attention.
 - **Gap closer.** Tap a nutrient to see which foods it came from, and which everyday foods would close the gap. Each suggestion can be added with one tap.
 - **Target map.** A heatmap of every nutrient by day (or week), with a days-on-target ranking and plain-language insights.
-- **Fast logging.** Type "2 eggs, 1 cup oatmeal and a banana". Re-add recent foods in one tap, copy yesterday's meal, and save recipes and custom foods.
+- **Fast logging.** Type "2 eggs, 1 cup oatmeal and a banana". Re-add recent foods in one tap, copy yesterday's meal, save a whole meal and log it again in one tap, and save recipes and custom foods.
 - **Trustworthy data.** 14,220 built-in USDA foods: 8,789 lab-analysed reference foods (SR28) plus 5,431 everyday foods as eaten (FNDDS 2021–2023), ranked by how often Americans report eating them (CDC NHANES 2021–2023). Optional live search of USDA FoodData Central. Unknown values are flagged, never counted as zero.
 - **Accounts and sync.** Use it as a guest (data stays in the browser) or create a free account (email and password) to sync your log across devices. Accounts run on Supabase with row-level security, so each person can only read their own data.
 - **Private.** No ads, no trackers. Export or delete everything at any time.
@@ -51,7 +51,7 @@ npm run test:e2e
 npm run test:accounts
 ```
 
-`npm test` runs 35 unit tests for the core logic and the sync engine (`node --test`). `npm run test:e2e` runs 27 browser checks of guest mode with Playwright: logging, editing, recipes, custom foods, online search (mocked), trends, export and import, reload persistence, phone layout and dark mode. `npm run test:accounts` runs 17 browser checks of accounts against a fake Supabase: sign-up, email confirmation, guest import, two-device sync, offline recovery, isolation between users, sign-out, password reset and account deletion. Both browser suites send the same Content-Security-Policy as the live site.
+`npm test` runs 51 unit tests for the core logic and the sync engine (`node --test`). `npm run test:e2e` runs 37 browser checks of guest mode with Playwright: logging, editing, recipes, custom foods, online search (mocked), trends, export and import, reload persistence, phone layout and dark mode. `npm run test:accounts` runs 19 browser checks of accounts against a fake Supabase: sign-up, email confirmation, guest import, two-device sync, offline recovery, isolation between users, sign-out, password reset and account deletion. Both browser suites send the same Content-Security-Policy as the live site.
 
 ## How it works
 
@@ -74,10 +74,10 @@ npm run test:accounts
 | Screen | Purpose |
 |---|---|
 | Today | Scoreboard (count met, status bar, calories and macros, Needs attention, all nutrients with filter), natural-language entry, and meals with entries. |
-| Add food (sheet) | Search, Recent and My foods tabs. The portion picker shows a live preview of the food's contribution to each target. Online USDA search is available here. |
+| Add food (sheet) | Search, Recent, Meals and My foods tabs. The portion picker shows a live preview of the food's contribution to each target. Online USDA search is available here. |
 | Nutrient detail (sheet) | Amount against target, the basis for the target, a missing-data warning, top sources, and gap-closing foods with "+ Add". |
 | Trends | Range of 1 week, 4 weeks, 3 months or 6 months. Tiles, insights, target map, days on target, and a nutrient chart. |
-| My foods | Custom foods (from a label), recipes (from ingredients, per serving) and saved online foods. |
+| My foods | Saved meals (log, rename, trim, delete), custom foods (from a label), recipes (from ingredients, per serving) and saved online foods. |
 | Profile | Profile, a targets table with overrides, the USDA API key, and export, import and erase. |
 
 ## Trends
@@ -94,6 +94,7 @@ Overrides { [nutrientKey]: { target?, max? } }
 Entry     { id, date: 'YYYY-MM-DD', meal, src: 'sr' | 'my', fid, name, qty, unit, unitGrams, grams }
 Food      { id, src, name, per100: number|null[33], portions: [grams, label][] }   // SR28 foods are read-only
 MyFood    Food + { kind: 'custom' | 'recipe' | 'usda', servings?, ingredients?, fdcId? }
+SavedMeal { id, kind: 'meal', name, mealHint, items: Entry-like[], uses }   // synced through the foods table
 Settings  { apiKey, units: 'us' | 'metric' }
 ```
 

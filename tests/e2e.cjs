@@ -248,6 +248,45 @@ async function step(name, fn) {
     assert.equal(r.servings, 2);
   });
 
+  await step('save a meal, then log it again in one tap on another day', async () => {
+    await page.click('[data-tab="today"]');
+    const breakfast = (await todayEntries()).filter((e) => e.meal === 'breakfast');
+    assert.ok(breakfast.length >= 2);
+    await page.click('[data-action="save-meal"][data-meal="breakfast"]');
+    await page.fill('#sm-name', 'Test breakfast');
+    await page.click('form[data-form="savemeal"] button[type="submit"]');
+    assert.equal(await page.evaluate(() => window.NutrientLedger.state.data.savedMeals.length), 1);
+    await page.click('[data-action="day-next"]');
+    assert.equal(await page.locator('.meal-chip').count(), 1, 'offered only in the breakfast slot');
+    await page.click('.meal-chip');
+    const next = await todayEntries();
+    assert.deepEqual(next.map((e) => [e.name, e.grams, e.meal]), breakfast.map((e) => [e.name, e.grams, 'breakfast']));
+  });
+
+  await step('the Meals tab logs a saved meal into any slot', async () => {
+    await page.click('[data-action="open-add"][data-meal="dinner"]');
+    await page.click('[data-action="add-view"][data-view="meals"]');
+    await page.click('#add-results [data-action="log-saved"]');
+    assert.ok((await todayEntries()).some((e) => e.meal === 'dinner'));
+    await page.click('[data-action="day-today"]');
+  });
+
+  await step('saved meals can be renamed, trimmed and deleted', async () => {
+    await page.click('[data-tab="foods"]');
+    assert.match(await page.textContent('#main'), /Test breakfast/);
+    await page.click('[data-action="edit-saved"]');
+    await page.fill('#sm-name', 'Weekday breakfast');
+    const before = await page.locator('[data-action="sm-remove-item"]').count();
+    await page.click('[data-action="sm-remove-item"] >> nth=0');
+    await page.click('form[data-form="savemeal"] button[type="submit"]');
+    const m = await page.evaluate(() => window.NutrientLedger.state.data.savedMeals[0]);
+    assert.equal(m.name, 'Weekday breakfast');
+    assert.equal(m.items.length, before - 1);
+    await page.click('[data-action="del-saved"]');
+    await page.click('[data-action="del-saved"]');
+    assert.equal(await page.evaluate(() => window.NutrientLedger.state.data.savedMeals.length), 0);
+  });
+
   await step('trends render heatmap, chart and insights from history', async () => {
     await page.evaluate(() => {
       const s = window.NutrientLedger.state;

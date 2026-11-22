@@ -190,6 +190,18 @@ async function until(fn, ms = 8000) {
     await until(async () => (await st(p2)).foods.some((f) => f.name === 'Synced bar'));
   });
 
+  await step('saved meals sync to the other device', async () => {
+    await p1.click('[data-tab="today"]');
+    await p1.click('[data-action="save-meal"] >> nth=0');
+    await p1.fill('#sm-name', 'Synced meal');
+    await p1.click('form[data-form="savemeal"] button[type="submit"]');
+    await until(() => rowsFor(A, 'foods').some((r) => r.data.kind === 'meal' && r.data.name === 'Synced meal'));
+    await p2.evaluate(() => window.NutrientLedger.account.engine.sync());
+    await until(async () => (await p2.evaluate(() => window.NutrientLedger.state.data.savedMeals.map((m) => m.name))).includes('Synced meal'));
+    const foods = await p2.evaluate(() => window.NutrientLedger.state.data.myFoods.map((f) => f.name));
+    assert.ok(!foods.includes('Synced meal'), 'meals stay out of My foods');
+  });
+
   await step('when the server is unreachable, changes wait and then sync', async () => {
     failNetwork = true;
     await p1.click('[data-tab="today"]');

@@ -698,6 +698,7 @@
     tbsp: ['tbsp', 'tbs', 'tablespoon', 'tablespoons', 'tbl'], tsp: ['tsp', 'teaspoon', 'teaspoons'],
     slice: ['slice', 'slices'], piece: ['piece', 'pieces', 'pc', 'pcs'], large: ['large', 'big'],
     medium: ['medium'], small: ['small'], serving: ['serving', 'servings', 'portion', 'portions'],
+    can: ['can', 'cans'], bottle: ['bottle', 'bottles'],
   };
   const UNIT_LOOKUP = [];
   for (const [u, words] of Object.entries(UNIT_WORDS)) for (const w of words) UNIT_LOOKUP.push([w, u]);
@@ -749,6 +750,8 @@
       case 'tsp': return find(/\btsp\b/) || (find(/\btbsp\b/) || 0) / 3 || (find(/\bcup\b/) || 0) / 48 || 5;
       case 'slice': return find(/\bslice\b/) || find(/\bpiece\b/) || defaultUnit(food).grams;
       case 'piece': return find(/\bpiece\b/) || defaultUnit(food).grams;
+      case 'can': return find(/\b(12 fl oz )?can\b/) || 368; // a 12 fl oz can
+      case 'bottle': return find(/\bbottle\b/) || 591; // a 20 fl oz bottle
       case 'large': return find(/\blarge\b/) || (find(/\bmedium\b/) || 0) * 1.25 || defaultUnit(food).grams;
       case 'medium': return find(/\bmedium\b/) || defaultUnit(food).grams;
       case 'small': return find(/\bsmall\b/) || (find(/\bmedium\b/) || 0) * 0.75 || defaultUnit(food).grams;
@@ -757,10 +760,16 @@
   }
 
   /** The portion a bare count ("2 eggs") most likely means. */
+  // Portion sizes nobody means by default ("1 individual school container", "1 carton").
+  const ODD_PORTION = /school|container|carton|bottle|\bcan\b|packet|pouch|guideline|serving size|quantity|NFS|\bbag\b|\bbox\b/i;
+  const DRINK_GROUP = /milk|coffee|tea|juice|soft drink|water|beverage|smoothie|shake|beer|wine|liquor|cocktail|drink/i;
   function defaultUnit(food) {
-    const ps = food.portions || [];
+    const ps = (food.portions || []).filter((p) => !ODD_PORTION.test(p[1]));
+    const all = food.portions || [];
+    // Drinks: "a coffee" or "milk" means a cup.
+    const cup = DRINK_GROUP.test(food.group || '') && ps.find((p) => /^1 cup\b/i.test(p[1]));
     const count = ps.find((p) => !VOLUME_RE.test(p[1]));
-    const p = count || ps[0];
+    const p = cup || count || ps[0] || all[0];
     if (!p) return { label: '100 g', grams: 100 };
     return { label: p[1], grams: p[0] / leadingNumber(p[1]) };
   }

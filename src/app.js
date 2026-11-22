@@ -50,6 +50,7 @@
     d.settings = Object.assign({ apiKey: '', units: 'us' }, d.settings || {});
     d.overrides = d.overrides || {};
     d.myFoods = d.myFoods || [];
+    d.savedMeals = d.savedMeals || [];
     d.entries = d.entries || [];
     d.profile = Object.assign({}, NL.DEFAULT_PROFILE, d.profile || {});
     if (d.onboarded === undefined) d.onboarded = true; // logs from before the guided first visit
@@ -62,6 +63,7 @@
       overrides: {},
       entries: withSample ? NL.sampleEntries(db, S.today, 70) : [],
       myFoods: [],
+      savedMeals: [],
       settings: { apiKey: '', units: 'us' },
       sample: !!withSample,
       onboarded: true,
@@ -270,9 +272,11 @@
           <h3>${m.name} <span class="small muted num" style="font-family:var(--body);font-weight:500">${es.length ? fmt(mk) + ' kcal' : ''}</span></h3>
           <div class="row">
             ${!es.length && prev.length ? `<button class="btn small ghost" data-action="copy-meal" data-meal="${m.key}">Copy yesterday's</button>` : ''}
+            ${es.length ? `<button class="btn small ghost" data-action="save-meal" data-meal="${m.key}" title="Save these foods to log them again in one tap">☆ Save meal</button>` : ''}
             <button class="btn small" data-action="open-add" data-meal="${m.key}">+ Add food</button>
           </div>
         </div>
+        ${!es.length ? savedMealChipsHTML(m.key) : ''}
         ${es.length ? `<ul class="entries">${es.map((e) => {
           const f = resolve(e);
           const k = f ? kcalOf(f, e.grams) : null;
@@ -452,7 +456,19 @@
           <button class="btn small ghost danger" data-action="del-food" data-id="${f.id}">${confirming ? 'Confirm delete' : 'Delete'}</button>
         </div></li>`;
     }).join('')}</ul>` : `<p class="empty">Nothing here yet. Add a food from a nutrition label, or build a recipe from ingredients so a home-cooked dish is one tap to log.</p>`;
-    return `<div class="section-head"><h2>My foods &amp; recipes</h2><div class="row"><button class="btn" data-action="new-custom">+ New food</button><button class="btn primary" data-action="new-recipe">+ New recipe</button></div></div>
+    const meals = sortedSavedMeals();
+    const mealList = meals.length ? `<ul class="food-list">${meals.map((m) => {
+      const confirming = S.confirm === 'meal:' + m.id;
+      return `<li><div style="min-width:0"><b>${esc(m.name)}</b> <span class="tag mine">Meal</span><div class="small muted">${m.items.length} food${m.items.length === 1 ? '' : 's'} · ${fmt(savedMealKcal(m))} kcal · ${esc(m.items.map((x) => x.name.split(',')[0]).join(', '))}</div></div>
+        <div class="row">
+          <button class="btn small" data-action="log-saved" data-id="${m.id}" data-meal="${m.mealHint || defaultMeal()}" data-today="1">Log</button>
+          <button class="btn small ghost" data-action="edit-saved" data-id="${m.id}">Edit</button>
+          <button class="btn small ghost danger" data-action="del-saved" data-id="${m.id}">${confirming ? 'Confirm delete' : 'Delete'}</button>
+        </div></li>`;
+    }).join('')}</ul>` : `<p class="empty">No saved meals yet. On the Today screen, tap <b>☆ Save meal</b> on any meal you've logged to re-log it in one tap.</p>`;
+    return `<div class="section-head"><h2>Saved meals</h2></div>
+      <section class="card" style="margin-bottom:22px">${mealList}</section>
+      <div class="section-head"><h2>My foods &amp; recipes</h2><div class="row"><button class="btn" data-action="new-custom">+ New food</button><button class="btn primary" data-action="new-recipe">+ New recipe</button></div></div>
       <section class="card">${list}</section>
       <p class="foot">Foods you pick from online USDA search are saved here too, so they keep working offline. Log entries point to the saved food, so editing a food or recipe updates every day it was logged.</p>`;
   }
@@ -534,7 +550,7 @@
     const root = $('#sheet-root');
     if (!S.sheet) { root.innerHTML = ''; document.body.style.overflow = ''; return; }
     const sh = S.sheet;
-    const map = { add: sheetAdd, detail: sheetDetail, custom: sheetCustom, recipe: sheetRecipe, auth: sheetAuth, account: sheetAccount, import: sheetImport, welcome: sheetWelcome };
+    const map = { savemeal: sheetSaveMeal, add: sheetAdd, detail: sheetDetail, custom: sheetCustom, recipe: sheetRecipe, auth: sheetAuth, account: sheetAccount, import: sheetImport, welcome: sheetWelcome };
     const { title, body } = map[sh.type]();
     root.innerHTML = `<div class="scrim" data-action="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
       <div class="sheet-head"><h2 id="sheet-title">${title}</h2><button class="btn ghost icon" data-action="close-sheet" aria-label="Close">✕</button></div>
@@ -566,6 +582,10 @@
       const rec = recentFoods();
       if (!rec.length) return `<p class="empty">Foods you log show up here for one-tap adding.</p>`;
       return `<ul class="results">${rec.map(({ food, entry }) => `<li class="result"><button class="pick" data-action="pick" data-src="${food.src}" data-fid="${food.id}"><b>${esc(food.name)}</b><span class="meta">${esc(portionText(entry))} · ${fmt(kcalOf(food, entry.grams))} kcal</span></button>${sh.mode === 'add' ? `<button class="btn small" data-action="quick-add" data-entry="${entry.id}" aria-label="Add ${esc(food.name)} again">+ Add</button>` : ''}</li>`).join('')}</ul>`;
+    }
+    if (sh.view === 'meals') {
+      if (!S.data.savedMeals.length) return `<p class="empty">No saved meals yet. Log a meal you eat often, then tap <b>☆ Save meal</b> on it to re-log it in one tap.</p>`;
+      return `<ul class="results">${sortedSavedMeals(sh.meal).map((m) => `<li class="result"><div class="pick" style="cursor:default"><b>${esc(m.name)}</b><span class="meta">${m.items.length} food${m.items.length === 1 ? '' : 's'} · ${fmt(savedMealKcal(m))} kcal · ${esc(m.items.map((x) => x.name.split(',')[0]).join(', ').slice(0, 70))}</span></div><button class="btn small" data-action="log-saved" data-id="${m.id}" data-meal="${sh.meal}">+ Add</button></li>`).join('')}</ul>`;
     }
     if (sh.view === 'mine') {
       if (!S.data.myFoods.length) return `<p class="empty">No saved foods yet. Create them under My foods.</p>`;
@@ -616,6 +636,49 @@
     const label = (v) => (v.db === 'fndds' ? (v.version ? v.version.charAt(0).toUpperCase() + v.version.slice(1) : 'Standard') : versionLabel(v.version) || 'Standard');
     return `<label class="field"><span>Version (${vs.length})</span><select class="input" id="pp-version">${vs.map((v) => `<option value="${v.id}" ${v.id === f.id ? 'selected' : ''}>${esc(label(v))} · ${fmt(v.per100[0])} kcal/100 g</option>`).join('')}</select></label>`;
   }
+  // ---- Saved meals ---------------------------------------------------------
+  function savedMealKcal(m) { return m.items.reduce((a, x) => { const f = foodOf(x.src, x.fid); return a + (f ? kcalOf(f, x.grams) || 0 : 0); }, 0); }
+  /** Meals saved from this slot first, then the most used. */
+  function sortedSavedMeals(slot) {
+    return S.data.savedMeals.slice().sort((a, b) => (slot ? (a.mealHint === slot ? 0 : 1) - (b.mealHint === slot ? 0 : 1) : 0) || (b.uses || 0) - (a.uses || 0) || a.name.localeCompare(b.name));
+  }
+  function savedMealChipsHTML(slot) {
+    // Only meals saved from this slot; any meal can still be logged anywhere from the Meals tab.
+    const list = sortedSavedMeals(slot).filter((m) => m.mealHint === slot).slice(0, 3);
+    if (!list.length) return '';
+    return `<div class="meal-chips">${list.map((m) => `<button class="chip meal-chip" data-action="log-saved" data-id="${m.id}" data-meal="${slot}">+ ${esc(m.name)} <span class="muted num">${fmt(savedMealKcal(m))} kcal</span></button>`).join('')}</div>`;
+  }
+  /** Log every food of a saved meal. Returns how many were added. */
+  function logSavedMeal(meal, date, slot) {
+    let n = 0;
+    for (const x of meal.items) {
+      const f = foodOf(x.src, x.fid);
+      if (!f) continue; // a custom food that was deleted
+      addEntry(date, slot, f, x.qty, { label: x.unit, grams: x.unitGrams || x.grams / (x.qty || 1) });
+      n++;
+    }
+    meal.uses = (meal.uses || 0) + 1;
+    meal.updatedAt = Date.now();
+    return n;
+  }
+  function suggestMealName(items, slot) {
+    const names = items.map((x) => x.name.split(',')[0].replace(/^(Boiled or poached|Fried|Cooked|Raw) /, '').trim());
+    const uniq = [...new Set(names)];
+    const base = uniq.slice(0, 2).join(' & ') + (uniq.length > 2 ? ` + ${uniq.length - 2} more` : '');
+    return (base || NL.MEALS.find((m) => m.key === slot).name).slice(0, 60);
+  }
+  function sheetSaveMeal() {
+    const sh = S.sheet;
+    const items = sh.items;
+    return { title: sh.id ? 'Edit saved meal' : 'Save this meal', body: `<form class="portion-pane" data-form="savemeal">
+      <label class="field"><span>Name</span><input class="input" id="sm-name" maxlength="60" value="${esc(sh.name)}" data-autofocus></label>
+      <ul class="list-plain">${items.map((x, i) => `<li><span>${esc(x.name)} <span class="small muted">${esc(portionText(x))}</span></span><span class="row" style="flex-wrap:nowrap"><span class="num small muted">${(() => { const f = foodOf(x.src, x.fid); return f ? fmt(kcalOf(f, x.grams)) + ' kcal' : 'food removed'; })()}</span>${items.length > 1 ? `<button type="button" class="btn ghost icon" data-action="sm-remove-item" data-i="${i}" aria-label="Remove ${esc(x.name)}">✕</button>` : ''}</span></li>`).join('')}</ul>
+      <p class="small muted" style="margin:0">One tap logs all of these with the same amounts. You can still edit each entry after logging.</p>
+      <p class="small" role="alert" data-auth-error style="color:var(--low);margin:0" hidden></p>
+      <div class="row" style="justify-content:flex-end">${sh.id ? `<button type="button" class="btn danger" data-action="sm-delete">Delete</button>` : ''}<button type="button" class="btn ghost" data-action="close-sheet">Cancel</button><button type="submit" class="btn primary">Save</button></div>
+    </form>` };
+  }
+
   /** Everyday foods first; USDA's database-style reference entries tucked into a collapsed section when there are everyday matches. */
   function resultListHTML(res, row, q) {
     if (!res.length) return `<p class="empty">No built-in match for “${esc(q)}”. Try a simpler word (“yogurt” instead of “strawberry yogurt cup”) or search online.</p>`;
@@ -668,7 +731,7 @@
     const sh = S.sheet;
     const title = sh.mode === 'edit' ? 'Edit entry' : sh.mode === 'ingredient' ? 'Add ingredient' : `Add to ${NL.MEALS.find((m) => m.key === sh.meal).name}`;
     if (sh.selected) return { title, body: portionPaneHTML() };
-    const views = [['search', 'Search'], ['recent', 'Recent'], ['mine', 'My foods']];
+    const views = [['search', 'Search'], ['recent', 'Recent']].concat(sh.mode === 'add' ? [['meals', 'Meals']] : [], [['mine', 'My foods']]);
     return {
       title,
       body: `<div class="row" style="flex-wrap:nowrap"><input class="input" id="add-q" type="search" placeholder="Search foods, e.g. oatmeal, salmon, greek yogurt" value="${esc(sh.query)}" autocomplete="off" data-autofocus aria-label="Search foods"></div>
@@ -964,6 +1027,37 @@
         commit(); return;
       }
       case 'open-add': openAdd({ meal: a.dataset.meal }); return;
+      case 'save-meal': {
+        const es = (byDate.get(S.date) || []).filter((e) => e.meal === a.dataset.meal);
+        const items = es.map((e) => ({ src: e.src, fid: e.fid, name: e.name, qty: e.qty, unit: e.unit, unitGrams: e.unitGrams, grams: e.grams }));
+        openSheet({ type: 'savemeal', id: null, slot: a.dataset.meal, name: suggestMealName(items, a.dataset.meal), items });
+        return;
+      }
+      case 'edit-saved': {
+        const m = S.data.savedMeals.find((x) => x.id === a.dataset.id);
+        if (m) openSheet({ type: 'savemeal', id: m.id, slot: m.mealHint, name: m.name, items: m.items.map((x) => Object.assign({}, x)) });
+        return;
+      }
+      case 'sm-remove-item': sh.name = $('#sm-name').value; sh.items.splice(Number(a.dataset.i), 1); renderSheet(); return;
+      case 'sm-delete': S.data.savedMeals = S.data.savedMeals.filter((x) => x.id !== sh.id); S.sheet = null; toast('Saved meal deleted'); commit(); return;
+      case 'del-saved': {
+        const id = a.dataset.id;
+        if (S.confirm !== 'meal:' + id) { S.confirm = 'meal:' + id; render(); return; }
+        S.confirm = null;
+        S.data.savedMeals = S.data.savedMeals.filter((x) => x.id !== id);
+        toast('Saved meal deleted'); commit(); return;
+      }
+      case 'log-saved': {
+        const m = S.data.savedMeals.find((x) => x.id === a.dataset.id);
+        if (!m) return;
+        const date = a.dataset.today ? S.today : (sh && sh.type === 'add' ? sh.date : S.date);
+        const slot = a.dataset.meal || defaultMeal();
+        const n = logSavedMeal(m, date, slot);
+        if (a.dataset.today) { S.tab = 'today'; S.date = S.today; }
+        S.sheet = null;
+        toast(n ? `Added ${m.name} to ${NL.MEALS.find((x) => x.key === slot).name}` : 'The foods in this meal are no longer available');
+        commit(); return;
+      }
       case 'copy-meal': {
         const prev = (byDate.get(NL.addDays(S.date, -1)) || []).filter((e) => e.meal === a.dataset.meal);
         for (const e of prev) S.data.entries.push(Object.assign({}, e, { id: uid(), date: S.date, sample: undefined }));
@@ -1240,6 +1334,8 @@
     for (const e of guest.entries) if (!e.sample && !have.has(e.id)) S.data.entries.push(Object.assign({}, e));
     const haveF = new Set(S.data.myFoods.map((f) => f.id));
     for (const f of guest.myFoods) if (!haveF.has(f.id)) S.data.myFoods.push(f);
+    const haveM = new Set(S.data.savedMeals.map((m) => m.id));
+    for (const m of guest.savedMeals || []) if (!haveM.has(m.id)) S.data.savedMeals.push(m);
     S.data.profile = guest.profile;
     S.data.overrides = guest.overrides;
     S.data.settings = Object.assign({}, S.data.settings, { units: guest.settings.units, apiKey: guest.settings.apiKey || S.data.settings.apiKey });
@@ -1516,8 +1612,24 @@
     const form = ev.target.closest('form[data-form]');
     if (!form) return;
     ev.preventDefault();
+    if (form.dataset.form === 'savemeal') { saveMealFromSheet(); return; }
     if (Acct.available) submitAuth(form.dataset.form);
   });
+  function saveMealFromSheet() {
+    const sh = S.sheet;
+    const name = $('#sm-name').value.trim();
+    if (!name) { const e = document.querySelector('#sheet-root [data-auth-error]'); e.textContent = 'Give the meal a name, like "Usual breakfast".'; e.hidden = false; return; }
+    if (sh.id) {
+      const m = S.data.savedMeals.find((x) => x.id === sh.id);
+      Object.assign(m, { name, items: sh.items, updatedAt: Date.now() });
+      toast('Saved meal updated');
+    } else {
+      S.data.savedMeals.push({ id: 'meal_' + uid(), kind: 'meal', name, mealHint: sh.slot, items: sh.items, uses: 0, createdAt: Date.now() });
+      toast(`Saved. It'll appear on empty ${NL.MEALS.find((x) => x.key === sh.slot).name.toLowerCase()} slots for one-tap logging.`);
+    }
+    S.sheet = null;
+    commit();
+  }
 
   // ---------------------------------------------------------------------------
   // Guided first visit: welcome → about you → your goal → first meal.

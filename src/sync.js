@@ -35,7 +35,8 @@
       for (const id of Object.keys(meta.hash[kind])) if (!seen.has(id)) out[kind].remove.push(id);
     };
     scan(data.entries, 'entries', entryData, (e) => e.sample);
-    scan(data.myFoods, 'foods', foodData);
+    // Saved meals travel in the foods table too (data.kind === 'meal'), so no extra database table is needed.
+    scan((data.myFoods || []).concat(data.savedMeals || []), 'foods', foodData);
     out.profile = meta.hash.profile !== stable(profileData(data));
     return out;
   }
@@ -49,34 +50,39 @@
    * (they are pushed right after, so unsynced local edits win). Returns the number of local changes.
    */
   function applyRemote(data, meta, kind, rows, dirtyIds) {
-    const list = kind === 'entries' ? data.entries : data.myFoods;
-    const index = new Map(list.map((x, i) => [x.id, i]));
+    // entries → data.entries; foods → data.myFoods, except saved meals (kind 'meal') → data.savedMeals.
+    if (kind === 'foods' && !data.savedMeals) data.savedMeals = [];
+    const lists = kind === 'entries' ? [data.entries] : [data.myFoods, data.savedMeals];
+    const toData = kind === 'entries' ? entryData : foodData;
+    const where = (id) => { for (const l of lists) { const i = l.findIndex((x) => x.id === id); if (i >= 0) return [l, i]; } return null; };
+    const target = (d) => (kind === 'foods' && d && d.kind === 'meal' ? data.savedMeals : lists[0]);
     let changed = 0;
     const removeIds = new Set();
     for (const r of rows) {
       if (dirtyIds.has(r.id)) continue;
+      const found = where(r.id);
       if (r.deleted) {
-        if (index.has(r.id)) { removeIds.add(r.id); changed++; }
+        if (found) { removeIds.add(r.id); changed++; }
         delete meta.hash[kind][r.id];
         continue;
       }
       const d = r.data;
       const h = stable(d);
-      if (index.has(r.id)) {
-        const i = index.get(r.id);
-        const cur = kind === 'entries' ? entryData(list[i]) : foodData(list[i]);
-        if (stable(cur) !== h) { list[i] = d; changed++; }
+      if (found) {
+        const [l, i] = found;
+        if (stable(toData(l[i])) !== h) { l[i] = d; changed++; }
       } else {
-        index.set(r.id, list.length);
-        list.push(d);
+        target(d).push(d);
         changed++;
       }
       meta.hash[kind][r.id] = h;
     }
     if (removeIds.size) {
-      const keep = list.filter((x) => !removeIds.has(x.id));
-      list.length = 0;
-      Array.prototype.push.apply(list, keep);
+      for (const l of lists) {
+        const keep = l.filter((x) => !removeIds.has(x.id));
+        l.length = 0;
+        Array.prototype.push.apply(l, keep);
+      }
     }
     return changed;
   }

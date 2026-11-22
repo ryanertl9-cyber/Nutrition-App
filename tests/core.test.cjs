@@ -319,3 +319,12 @@ test('everyday foods fill pantothenic acid and manganese from ingredients, or le
   assert.ok(fn.every((f) => f.per100[MI] === null || f.per100[MI] >= 0));
   assert.ok(fn.some((f) => f.per100[PI] === null), 'some stay unknown rather than zero');
 });
+
+test('default portions are what people mean: a cup for drinks, no school cartons', () => {
+  const one = (t) => NL.parseMeal(t, db)[0];
+  assert.equal(one('milk').grams, 244);
+  assert.doesNotMatch(one('milk').unitLabel, /school|container/i);
+  assert.match(one('coffee').unitLabel, /cup/);
+  assert.equal(one('a can of coke').food.name, 'Cola');
+  assert.ok(Math.abs(one('a can of coke').grams - 368) < 30);
+});

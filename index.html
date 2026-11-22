@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/brand/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Simply Nutrition</title>
 <meta name="description" content="A free nutrition tracker that shows which of 29 daily nutrient targets you hit and which you miss, using USDA lab-analyzed food data. Log a meal in one sentence.">
 <meta property="og:title" content="Simply Nutrition">
@@ -11,6 +14,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://simplynutrition.app/">
 <meta property="og:image" content="https://simplynutrition.app/assets/landing/scoreboard.webp">
+<meta name="apple-mobile-web-app-title" content="Simply Nutrition">
 <!-- Returning users go straight to the app; sign-in links from emails are forwarded to it. -->
 <script src="/assets/landing.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,7 +55,9 @@ nav.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; back
 nav.top .wrap { display: flex; align-items: center; gap: 26px; padding-block: 12px; }
 .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; color: var(--ink); text-decoration: none !important; }
 .brand b { font: 600 .9rem/1 var(--body); letter-spacing: .28em; text-transform: uppercase; }
-.mark { width: 12px; height: 12px; border-radius: 3px; background: linear-gradient(180deg, var(--ink) 55%, var(--met) 55%); }
+.mark { width: 18px; height: 18px; flex: none; display: block; }
+.mark rect { fill: var(--ink); }
+.mark rect.miss { fill: var(--low); }
 nav.top .links { display: flex; gap: 26px; }
 nav.top .links a { color: var(--muted); font: 600 .72rem/1 var(--body); letter-spacing: .18em; text-transform: uppercase; text-decoration: none; }
 nav.top .links a:hover { color: var(--ink); }
@@ -141,7 +147,7 @@ footer a { color: var(--muted); }
 <body>
 <nav class="top" aria-label="Main">
   <div class="wrap">
-    <a class="brand" href="/?home"><span class="mark" aria-hidden="true"></span><b>Simply Nutrition</b></a>
+    <a class="brand" href="/?home"><svg class="mark" viewBox="0 0 23 23" aria-hidden="true"><rect x="0" y="0" width="6" height="6" rx="1.6"/><rect x="8.5" y="0" width="6" height="6" rx="1.6"/><rect x="17" y="0" width="6" height="6" rx="1.6"/><rect x="0" y="8.5" width="6" height="6" rx="1.6"/><rect x="8.5" y="8.5" width="6" height="6" rx="1.6"/><rect x="17" y="8.5" width="6" height="6" rx="1.6"/><rect x="0" y="17" width="6" height="6" rx="1.6"/><rect x="8.5" y="17" width="6" height="6" rx="1.6"/><rect x="17" y="17" width="6" height="6" rx="1.6" class="miss"/></svg><b>Simply Nutrition</b></a>
     <div class="links"><a href="#features">Features</a><a href="#trust">Why trust it</a><a href="#faq">FAQ</a></div>
     <a class="btn small signin" href="/app/#signin">Sign in</a>
     <a class="btn small primary" href="/app/">Open the app</a>

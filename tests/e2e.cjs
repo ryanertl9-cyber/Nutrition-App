@@ -10,7 +10,7 @@ const ROOT = path.join(__dirname, '..');
 const SHOTS = process.env.SHOTS_DIR || '';
 // Same Content-Security-Policy the live site sends (netlify.toml), so blocked requests fail here too.
 const CSP = fs.readFileSync(path.join(ROOT, 'netlify.toml'), 'utf8').match(/Content-Security-Policy = "([^"]+)"/)[1];
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.webp': 'image/webp' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.png': 'image/png' };
 
 function serve() {
   const srv = http.createServer((req, res) => {

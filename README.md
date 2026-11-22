@@ -52,7 +52,7 @@ npm run test:e2e
 npm run test:accounts
 ```
 
-`npm test` runs 54 unit tests for the core logic and the sync engine (`node --test`). `npm run test:e2e` runs 38 browser checks of guest mode with Playwright: logging, editing, recipes, custom foods, online search (mocked), trends, export and import, reload persistence, phone layout and dark mode. `npm run test:accounts` runs 20 browser checks of accounts against a fake Supabase: sign-up, email confirmation, guest import, two-device sync, offline recovery, isolation between users, sign-out, password reset and account deletion. `npm run test:barcode` runs 10 browser checks of barcode scanning with a generated barcode video as the phone camera and mocked Open Food Facts/USDA: scanning, offline re-scan, typed numbers on desktop, unknown products, unreachable databases, a blocked camera, and that the camera turns off. The browser suites send the same Content-Security-Policy as the live site.
+`npm test` runs 54 unit tests for the core logic and the sync engine (`node --test`). `npm run test:e2e` runs 39 browser checks of guest mode with Playwright: logging, editing, recipes, custom foods, online search (mocked), trends, export and import, reload persistence, phone layout and dark mode. `npm run test:accounts` runs 20 browser checks of accounts against a fake Supabase: sign-up, email confirmation, guest import, two-device sync, offline recovery, isolation between users, sign-out, password reset and account deletion. `npm run test:barcode` runs 10 browser checks of barcode scanning with a generated barcode video as the phone camera and mocked Open Food Facts/USDA: scanning, offline re-scan, typed numbers on desktop, unknown products, unreachable databases, a blocked camera, and that the camera turns off. The browser suites send the same Content-Security-Policy as the live site.
 
 ## How it works
 
@@ -74,7 +74,7 @@ npm run test:accounts
 
 | Screen | Purpose |
 |---|---|
-| Today | Date bar with a calendar to jump to any day (logged days are dotted). Scoreboard (count met, status bar, calories and macros, Needs attention, all nutrients with filter), natural-language entry, and meals with entries. |
+| Today | Date bar with a calendar to jump to any day (logged days are dotted). Scoreboard (with a "Macros only" fold that hides the 24 micronutrient and limit rows and enlarges calories, protein, carbs, fat and fiber; remembered per device) (count met, status bar, calories and macros, Needs attention, all nutrients with filter), natural-language entry, and meals with entries. |
 | Add food (sheet) | Search, Recent, Meals and My foods tabs, plus Scan on phones (typing a barcode number into search works everywhere). The portion picker shows a live preview of the food's contribution to each target. Online USDA search is available here. |
 | Scan barcode (sheet) | Live camera with a guide box, or a typed number. Found products open the portion picker; unknown ones can be added from the label. |
 | Nutrient detail (sheet) | Amount against target, the basis for the target, a missing-data warning, top sources, and gap-closing foods with "+ Add". |

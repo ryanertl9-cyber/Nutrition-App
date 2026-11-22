@@ -222,7 +222,8 @@ async function step(name, fn) {
     await page.fill('[data-cf="kcal"]', '180');
     await page.fill('[data-cf="protein"]', '4');
     await page.click('[data-action="save-custom"]');
-    assert.match(await page.textContent('.food-list'), /Test granola bar/);
+    await page.waitForFunction(() => window.NutrientLedger.state.data.myFoods.some((x) => x.name === 'Test granola bar'));
+    assert.match(await page.textContent('#main'), /Test granola bar/);
     const f = await page.evaluate(() => window.NutrientLedger.state.data.myFoods.find((x) => x.name === 'Test granola bar'));
     assert.equal(f.per100[0], 450);
   });
@@ -246,6 +247,32 @@ async function step(name, fn) {
     assert.equal(r.name, 'Lentil soup');
     assert.equal(r.ingredients.length, 2);
     assert.equal(r.servings, 2);
+  });
+
+  await step('"Macros only" folds away the micronutrients, enlarges the macros, and is remembered', async () => {
+    await page.click('[data-tab="today"]');
+    const visible = (sel) => page.evaluate((q) => { const el = document.querySelector(q); return !!el && el.getBoundingClientRect().height > 1 && getComputedStyle(el).display !== 'none'; }, sel);
+    const kcalSize = () => page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.energy .kcal')).fontSize));
+    assert.ok(await visible('.statebar'));
+    assert.ok(await visible('.cat'));
+    const before = await kcalSize();
+    await page.click('[data-action="toggle-micros"]');
+    await page.waitForTimeout(600);
+    const foldHeights = () => page.evaluate(() => [...document.querySelectorAll('.score .fold')].map((f) => Math.round(f.getBoundingClientRect().height)));
+    assert.deepEqual(await foldHeights(), [0, 0], '29-target bar and nutrient list folded away');
+    assert.ok(await page.evaluate(() => [...document.querySelectorAll('.score .fold')].every((f) => f.inert)), 'folded parts are skipped by keyboard and screen readers');
+    assert.match(await page.textContent('.bigcount'), /\/5 macros met/);
+    assert.ok(await visible('.macro-extra'), 'fiber joins the macros');
+    assert.ok((await kcalSize()) > before * 1.5, 'calories get bigger');
+    assert.equal(await page.getAttribute('[data-action="toggle-micros"]', 'aria-expanded'), 'false');
+    await page.reload();
+    await page.waitForSelector('.score');
+    assert.ok(await page.evaluate(() => document.querySelector('.score').classList.contains('macro-mode')), 'remembered after reload');
+    await page.click('[data-action="toggle-micros"]');
+    await page.waitForTimeout(600);
+    assert.ok((await foldHeights()).every((h) => h > 20), 'unfolded again');
+    assert.match(await page.textContent('.bigcount'), /\/29 met/);
+    assert.equal(await kcalSize(), before, 'back to normal size');
   });
 
   await step('the calendar jumps straight to a past day and marks logged days', async () => {

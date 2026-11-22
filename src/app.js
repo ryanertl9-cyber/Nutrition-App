@@ -196,10 +196,15 @@
     const c = rep.counts;
     const segs = ['met', 'near', 'low', 'over'].map((s) => c[s] ? `<span class="bg-${s}" style="width:${(c[s] / rep.total) * 100}%" title="${STATE_WORD[s]}: ${c[s]}"></span>` : '').join('');
     const kc = rep.rows[NL.BY_KEY.kcal.index];
-    const macro = (k) => {
+    const macro = (k, extra) => {
       const r = rep.rows[NL.BY_KEY[k].index];
-      return `<div class="macro"><div class="row" style="justify-content:space-between"><span class="small"><span class="dot s-${r.state}">${GLYPH[r.state]}</span> ${esc(r.name)}</span><span class="v small">${fmt(r.value)}<span class="muted">/${fmt(r.target.target)} g</span></span></div>${barHTML(r)}</div>`;
+      const t = r.target;
+      const togo = t.target != null && r.value < t.target ? `${fmt(t.target - r.value)} g to go` : t.max != null && r.value > t.max ? `${fmt(r.value - t.max)} g over` : 'Target met';
+      return `<div class="macro${extra ? ' macro-extra' : ''}"><div class="mhead"><span class="mname small"><span class="dot s-${r.state}">${GLYPH[r.state]}</span> ${esc(r.name)}</span><span class="v small">${fmt(r.value)}<span class="muted">/${fmt(t.target)} g</span></span></div>${barHTML(r)}<div class="mleft small muted">${togo}</div></div>`;
     };
+    const macrosOnly = S.data.settings.scoreView === 'macros';
+    const macroRows = rep.rows.filter((r) => r.cat === 'energy' || r.cat === 'macro');
+    const macroMet = macroRows.filter((r) => r.state === 'met').length;
     const attention = rep.rows.filter((r) => (r.state === 'low' || r.state === 'over') && r.cat !== 'energy').sort((a, b) => (a.state === 'over' ? -1 : 0) - (b.state === 'over' ? -1 : 0) || (a.pct || 0) - (b.pct || 0));
     const isEmpty = !d.entries.length;
     const inProgress = S.date === S.today && !isEmpty;
@@ -220,23 +225,30 @@
     }).join('') || `<p class="empty">No nutrients in this view.</p>`;
 
     const score = `
-      <section class="score" aria-labelledby="score-h">
+      <section class="score${macrosOnly ? ' macro-mode' : ''}" aria-labelledby="score-h">
         <div class="score-title">
           <div><div class="eyebrow">Daily targets</div><h2 id="score-h">${esc(dateLabel(S.date))}</h2></div>
-          <div class="bigcount" aria-label="${c.met} of ${rep.total} targets met">${c.met}<small>/${rep.total} met</small></div>
+          <div class="bigcount"><span class="count-all" aria-label="${c.met} of ${rep.total} targets met">${c.met}<small>/${rep.total} met</small></span><span class="count-macro" aria-label="${macroMet} of ${macroRows.length} macro targets met">${macroMet}<small>/${macroRows.length} macros met</small></span></div>
         </div>
         <div class="rule-xl"></div>
+        <div class="fold"${macrosOnly ? ' inert' : ''}><div class="fold-inner">
         <div class="statebar" role="img" aria-label="Met ${c.met}, close ${c.near}, low ${c.low}, over ${c.over}">${segs}</div>
         <div class="legend">
           ${['met', 'near', 'low', 'over'].map((s) => `<span><span class="dot s-${s}">${GLYPH[s]}</span> ${STATE_WORD[s]} <b>${c[s]}</b></span>`).join('')}
         </div>
         ${inProgress ? `<p class="small muted" style="margin:6px 0 0">Day in progress. Totals so far.</p>` : ''}
         <div class="rule-m"></div>
+        </div></div>
         <div class="energy">
           <div class="kcal">${fmt(kc.value)}</div>
           <div><div class="row" style="justify-content:space-between"><span class="small"><span class="dot s-${kc.state}">${GLYPH[kc.state]}</span> Calories</span><span class="small muted num">target ${fmt(targets.kcal.target)} · ${fmt(Math.max(0, targets.kcal.target - kc.value))} left</span></div>${barHTML(kc)}</div>
         </div>
-        <div class="macros">${macro('protein')}${macro('carbs')}${macro('fat')}</div>
+        <div class="macros">${macro('protein')}${macro('carbs')}${macro('fat')}${macro('fiber', true)}</div>
+        <button class="fold-toggle" data-action="toggle-micros" aria-expanded="${!macrosOnly}" aria-controls="score-more">
+          <span class="when-open">Macros only</span><span class="when-closed">Show all ${rep.total} nutrients</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>
+        </button>
+        <div class="fold" id="score-more"${macrosOnly ? ' inert' : ''}><div class="fold-inner">
         <div class="rule"></div>
         <div class="eyebrow" style="margin-top:8px">Needs attention</div>
         <div class="attn">${chips}</div>
@@ -249,6 +261,7 @@
         </div>
         ${board}
         <p class="small muted" style="margin:10px 0 0">Tap any nutrient to see where it came from and which foods would close the gap.</p>
+        </div></div>
       </section>`;
 
     const quick = `
@@ -1254,6 +1267,17 @@
       case 'cal-pick': S.date = a.dataset.date; S.parsed = null; S.tab = 'today'; S.sheet = null; render(); window.scrollTo(0, 0); return;
       case 'goto-day': S.date = a.dataset.date; S.tab = 'today'; render(); window.scrollTo(0, 0); return;
       case 'filter': S.filter = a.dataset.filter; render(); return;
+      case 'toggle-micros': {
+        // Toggle in place (no re-render) so the fold and the macros animate.
+        const only = S.data.settings.scoreView !== 'macros';
+        S.data.settings.scoreView = only ? 'macros' : 'all';
+        save();
+        const card = a.closest('.score');
+        card.classList.toggle('macro-mode', only);
+        a.setAttribute('aria-expanded', String(!only));
+        for (const f of card.querySelectorAll('.fold')) f.inert = only;
+        return;
+      }
       case 'range': S.range = a.dataset.range; render(); return;
       case 'chart-key': S.chartKey = a.dataset.key; render(); return;
       case 'detail': if (a.dataset.range) S.date = S.today; openSheet({ type: 'detail', key: a.dataset.key }); return;

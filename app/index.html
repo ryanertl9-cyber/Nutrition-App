@@ -336,6 +336,36 @@ body::before { background: var(--bg); }
 .score .seg button[aria-pressed="true"] { background: #111111; color: #ffffff; }
 .score .nrow:hover { background: #f2f2f5; }
 
+/* Fold: "Macros only" collapses the micronutrient parts and enlarges the macros. */
+.fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .4s ease, opacity .3s ease; }
+.fold > .fold-inner { overflow: hidden; min-height: 0; }
+.macro-mode .fold { grid-template-rows: 0fr; opacity: 0; }
+.count-macro, .macro-mode .count-all, .when-closed, .macro-mode .when-open { display: none; }
+.macro-mode .count-macro, .macro-mode .when-closed { display: inline; }
+.fold-toggle { display: flex; align-items: center; justify-content: center; gap: 6px; width: fit-content; max-width: 100%; margin: 12px auto 4px; padding: 7px 16px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--sunken); color: var(--ink); font: 600 .85rem/1.2 var(--body); cursor: pointer; }
+.fold-toggle:hover { border-color: var(--ink); }
+.fold-toggle svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .3s ease; }
+.macro-mode .fold-toggle svg { transform: rotate(180deg); }
+.mhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 6px; }
+.mhead .mname, .mhead .v { white-space: nowrap; }
+.mleft { display: none; }
+.macro-extra { display: none; }
+.energy .kcal, .macro .v, .macro .mname, .macros, .energy, .macro .bar { transition: font-size .4s ease, gap .4s ease, height .4s ease, padding .4s ease, margin .4s ease; }
+.macro-mode .energy { padding: 6px 0 4px; gap: 6px 18px; }
+.macro-mode .energy .kcal { font-size: 4.2rem; letter-spacing: -.04em; }
+.macro-mode .energy .bar { height: 14px; }
+.macro-mode .macros { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.macro-mode .macro { background: var(--sunken); border-radius: 12px; padding: 12px 14px; }
+.macro-mode .macro-extra { display: block; }
+.macro-mode .mhead { flex-direction: column; align-items: flex-start; gap: 2px; }
+.macro-mode .macro .mname { font-size: .95rem; font-weight: 600; }
+.macro-mode .macro .v { font-size: 2rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
+.macro-mode .macro .v .muted { font-size: 1rem; font-weight: 600; letter-spacing: 0; }
+.macro-mode .macro .bar { height: 12px; margin-top: 8px; }
+.macro-mode .mleft { display: block; margin-top: 6px; }
+@media (max-width: 520px) { .macro-mode .energy .kcal { font-size: 3.4rem; } .macro-mode .macro .v { font-size: 1.7rem; } }
+@media (prefers-reduced-motion: reduce) { .fold, .fold-toggle svg, .energy .kcal, .macro .v, .macro .mname, .macros, .energy, .macro .bar { transition: none; } }
+
 /* Install tip and update bar */
 .install { display: flex; gap: 14px; align-items: center; background: var(--surface); border: 1px solid rgb(167 139 250 / 35%); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; }
 .install img { width: 44px; height: 44px; border-radius: 10px; flex: none; }

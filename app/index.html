@@ -381,6 +381,24 @@ body::before { background: var(--bg); }
 .meal-chip .muted { font-weight: 500; }
 .home-link { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--muted); }
 .home-link:hover { color: var(--ink); }
+.date-pick { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: none; border: 1px solid transparent; border-radius: 999px; color: inherit; font: inherit; font-weight: 600; padding: 6px 12px; cursor: pointer; }
+.date-pick:hover { background: rgb(255 255 255 / 8%); }
+.date-pick svg { width: 16px; height: 16px; flex: none; fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; }
+.sheet.cal-sheet { width: min(420px, 100%); }
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cal-head b { font-size: 1.05rem; }
+.cal-head .btn.icon { font-size: 1.3rem; line-height: 1; padding: 2px 12px 5px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.cal-grid .dow { font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 4px 0 6px; }
+.cal-day { position: relative; aspect-ratio: 1; max-height: 52px; border: 1px solid transparent; border-radius: 12px; background: none; color: var(--ink); font: 600 .95rem/1 var(--body); cursor: pointer; }
+.cal-day:hover { background: rgb(255 255 255 / 8%); }
+.cal-day.out { color: var(--muted); opacity: .45; }
+.cal-day.future { color: var(--muted); }
+.cal-day.is-today { border-color: var(--line-strong); }
+.cal-day.sel { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.cal-day.logged::after { content: ""; position: absolute; left: 50%; bottom: 6px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--accent); }
+.cal-day.sel.logged::after { background: var(--accent-ink); }
+.cal-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
 .home-link svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 @media (max-width: 600px) { .home-link { order: 1; padding-inline: 8px; } .home-link span { display: none; } }
 </style>
@@ -394,7 +412,7 @@ body::before { background: var(--bg); }
     <a class="btn ghost small home-link" href="/?home" data-hosted-only aria-label="Home page" title="Home page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Home</span></a>
     <div class="datenav" id="datenav">
       <button class="btn ghost icon" data-action="day-prev" aria-label="Previous day">‹</button>
-      <span class="label" id="date-label"></span>
+      <button class="label date-pick" data-action="open-cal" aria-label="Choose a date" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span id="date-label"></span></button>
       <button class="btn ghost icon" data-action="day-next" aria-label="Next day">›</button>
       <button class="btn small" data-action="day-today" id="btn-today">Today</button>
     </div>

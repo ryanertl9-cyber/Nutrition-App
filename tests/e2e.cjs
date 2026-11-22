@@ -248,6 +248,24 @@ async function step(name, fn) {
     assert.equal(r.servings, 2);
   });
 
+  await step('the calendar jumps straight to a past day and marks logged days', async () => {
+    await page.click('[data-tab="today"]');
+    const today = await page.evaluate(() => window.NutrientLedger.state.today);
+    await page.click('[data-action="open-cal"]');
+    await page.waitForSelector('.cal-grid');
+    assert.ok(await page.locator(`.cal-day.logged[data-date="${today}"]`).count(), 'today has entries, so it has a dot');
+    await page.click('[data-action="cal-month"][data-step="-1"]');
+    await page.click('[data-action="cal-month"][data-step="-1"]');
+    const target = await page.getAttribute('.cal-day:not(.out) >> nth=14', 'data-date');
+    await page.click(`.cal-day[data-date="${target}"]`);
+    assert.equal(await page.locator('.cal-grid').count(), 0, 'calendar closes');
+    assert.equal(await page.evaluate(() => window.NutrientLedger.state.date), target);
+    assert.ok(!(await page.isHidden('#btn-today')));
+    await page.click('[data-action="open-cal"]');
+    await page.click('.cal-foot [data-action="cal-pick"]');
+    assert.equal(await page.evaluate(() => window.NutrientLedger.state.date), today);
+  });
+
   await step('save a meal, then log it again in one tap on another day', async () => {
     await page.click('[data-tab="today"]');
     const breakfast = (await todayEntries()).filter((e) => e.meal === 'breakfast');

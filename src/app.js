@@ -550,9 +550,9 @@
     const root = $('#sheet-root');
     if (!S.sheet) { root.innerHTML = ''; document.body.style.overflow = ''; return; }
     const sh = S.sheet;
-    const map = { savemeal: sheetSaveMeal, add: sheetAdd, detail: sheetDetail, custom: sheetCustom, recipe: sheetRecipe, auth: sheetAuth, account: sheetAccount, import: sheetImport, welcome: sheetWelcome };
+    const map = { calendar: sheetCalendar, savemeal: sheetSaveMeal, add: sheetAdd, detail: sheetDetail, custom: sheetCustom, recipe: sheetRecipe, auth: sheetAuth, account: sheetAccount, import: sheetImport, welcome: sheetWelcome };
     const { title, body } = map[sh.type]();
-    root.innerHTML = `<div class="scrim" data-action="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    root.innerHTML = `<div class="scrim" data-action="scrim"><div class="sheet${sh.type === 'calendar' ? ' cal-sheet' : ''}" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
       <div class="sheet-head"><h2 id="sheet-title">${title}</h2><button class="btn ghost icon" data-action="close-sheet" aria-label="Close">✕</button></div>
       <div class="sheet-body">${body}</div></div></div>`;
     document.body.style.overflow = 'hidden';
@@ -667,6 +667,43 @@
     const base = uniq.slice(0, 2).join(' & ') + (uniq.length > 2 ? ` + ${uniq.length - 2} more` : '');
     return (base || NL.MEALS.find((m) => m.key === slot).name).slice(0, 60);
   }
+  // Calendar: jump to any day. Days with something logged get a dot.
+  function sheetCalendar() {
+    const sh = S.sheet;
+    const [y, m] = sh.month.split('-').map(Number);
+    const first = new Date(y, m - 1, 1);
+    const start = NL.addDays(NL.ymd(first), -first.getDay()); // weeks start on Sunday
+    const monthName = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    let cells = '';
+    let logged = 0;
+    for (let i = 0; i < 42; i++) {
+      const d = NL.addDays(start, i);
+      const dt = NL.parseYmd(d);
+      const inMonth = dt.getMonth() === m - 1;
+      if (i === 35 && !inMonth) break; // drop an empty sixth week
+      const has = (byDate.get(d) || []).length > 0;
+      if (has && inMonth) logged++;
+      const cls = ['cal-day', inMonth ? '' : 'out', d === S.today ? 'is-today' : '', d === S.date ? 'sel' : '', d > S.today ? 'future' : '', has ? 'logged' : ''].filter(Boolean).join(' ');
+      const label = dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + (has ? ', logged' : '');
+      cells += `<button class="${cls}" data-action="cal-pick" data-date="${d}" aria-label="${label}"${d === S.date ? ' aria-current="date"' : ''}>${dt.getDate()}</button>`;
+    }
+    const thisMonth = S.today.slice(0, 7);
+    const body = `<div class="cal-head">
+        <button class="btn ghost icon" data-action="cal-month" data-step="-1" aria-label="Previous month">‹</button>
+        <b aria-live="polite">${monthName}</b>
+        <button class="btn ghost icon" data-action="cal-month" data-step="1" aria-label="Next month">›</button>
+      </div>
+      <div class="cal-grid">${['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((w) => `<span class="dow" aria-hidden="true">${w}</span>`).join('')}${cells}</div>
+      <div class="cal-foot"><span class="small muted">${logged ? `${logged} day${logged === 1 ? '' : 's'} logged this month` : 'Nothing logged this month'}</span>
+        ${sh.month !== thisMonth || S.date !== S.today ? '<button class="btn small" data-action="cal-pick" data-date="' + S.today + '">Today</button>' : ''}</div>`;
+    return { title: 'Go to a day', body };
+  }
+  function shiftMonth(month, n) {
+    const [y, m] = month.split('-').map(Number);
+    const d = new Date(y, m - 1 + n, 1);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
   function sheetSaveMeal() {
     const sh = S.sheet;
     const items = sh.items;
@@ -982,6 +1019,9 @@
       case 'day-prev': S.date = NL.addDays(S.date, -1); S.parsed = null; render(); return;
       case 'day-next': S.date = NL.addDays(S.date, 1); S.parsed = null; render(); return;
       case 'day-today': S.date = S.today; render(); return;
+      case 'open-cal': openSheet({ type: 'calendar', month: S.date.slice(0, 7) }); return;
+      case 'cal-month': sh.month = shiftMonth(sh.month, Number(a.dataset.step)); renderSheet(); return;
+      case 'cal-pick': S.date = a.dataset.date; S.parsed = null; S.tab = 'today'; S.sheet = null; render(); window.scrollTo(0, 0); return;
       case 'goto-day': S.date = a.dataset.date; S.tab = 'today'; render(); window.scrollTo(0, 0); return;
       case 'filter': S.filter = a.dataset.filter; render(); return;
       case 'range': S.range = a.dataset.range; render(); return;

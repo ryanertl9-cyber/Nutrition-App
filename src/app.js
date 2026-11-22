@@ -1574,7 +1574,7 @@
     if (sh.step === 0) {
       return { title: 'Welcome', body: `<div class="portion-pane w-intro">
         <div class="w-hero"><svg class="mark" viewBox="0 0 23 23" aria-hidden="true">${[0, 1, 2].map((r) => [0, 1, 2].map((c) => `<rect x="${c * 8.5}" y="${r * 8.5}" width="6" height="6" rx="1.6"${r === 2 && c === 2 ? ' class="miss"' : ''}/>`).join('')).join('')}</svg>
-          <h2>See which nutrients you hit, and which you miss.</h2>
+          <h2>A stat sheet of what you eat.</h2>
           <p class="muted" style="margin:0">Three quick steps: about you, your goal, and your first meal. About a minute.</p></div>
         <button class="btn primary w-big" data-action="welcome-start" data-autofocus>Get started</button>
         <button class="btn ghost" data-action="welcome-example">Just looking? See an example day</button>

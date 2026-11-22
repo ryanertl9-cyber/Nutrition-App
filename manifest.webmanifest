@@ -1,7 +1,7 @@
 {
   "name": "Simply Nutrition",
   "short_name": "Simply Nutrition",
-  "description": "See which nutrients you hit, and which you miss.",
+  "description": "A stat sheet of what you eat.",
   "id": "/app/",
   "start_url": "/app/",
   "scope": "/",

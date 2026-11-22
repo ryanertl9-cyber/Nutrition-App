@@ -306,7 +306,7 @@ async function step(name, fn) {
   await step('landing page shows to first-time visitors and links to the app', async () => {
     await lp.goto(url);
     assert.equal(new URL(lp.url()).pathname, '/');
-    assert.match(await lp.textContent('h1'), /See which nutrients you hit/);
+    assert.match(await lp.textContent('h1'), /A stat sheet of what you eat/);
     assert.ok(await lp.isVisible('.label'));
     assert.equal(await lp.getAttribute('.hero .btn.primary', 'href'), '/app/');
     for (const img of await lp.locator('img').all()) {

@@ -399,6 +399,22 @@ body::before { background: var(--bg); }
 .cal-day.logged::after { content: ""; position: absolute; left: 50%; bottom: 6px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--accent); }
 .cal-day.sel.logged::after { background: var(--accent-ink); }
 .cal-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.bc-icon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.bc-icon .bars { stroke: var(--accent); }
+.scan-btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.bc-typed { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: 14px; margin-top: 4px; }
+.bc-typed > div { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bc-typed .bc-icon { width: 24px; height: 24px; }
+.scan-view { position: relative; border-radius: 16px; overflow: hidden; background: #000; aspect-ratio: 4 / 3; max-height: 52vh; margin: 0 auto 8px; width: 100%; }
+.scan-view video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scan-frame { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.scan-frame span { width: 78%; height: 40%; border: 2px solid rgb(255 255 255 / 85%); border-radius: 12px; box-shadow: 0 0 0 999px rgb(0 0 0 / 35%); position: relative; overflow: hidden; }
+.scan-frame span::after { content: ""; position: absolute; left: 6%; right: 6%; top: 50%; height: 2px; background: var(--accent); box-shadow: 0 0 12px var(--accent); animation: scanline 1.8s ease-in-out infinite alternate; }
+@keyframes scanline { from { transform: translateY(-38px); } to { transform: translateY(38px); } }
+@media (prefers-reduced-motion: reduce) { .scan-frame span::after { animation: none; } }
+.scan-status { text-align: center; padding: 18px 8px 10px; margin: 0; }
+.scan-status p { margin: 6px 0 14px; }
+.bc-manual { display: flex; align-items: flex-end; gap: 8px; margin-top: 14px; }
 .home-link svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 @media (max-width: 600px) { .home-link { order: 1; padding-inline: 8px; } .home-link span { display: none; } }
 </style>

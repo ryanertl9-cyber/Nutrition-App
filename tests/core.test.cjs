@@ -328,3 +328,46 @@ test('default portions are what people mean: a cup for drinks, no school cartons
   assert.equal(one('a can of coke').food.name, 'Cola');
   assert.ok(Math.abs(one('a can of coke').grams - 368) < 30);
 });
+
+test('barcodes: UPC-A, EAN-13 and GTIN-14 forms of one product match', () => {
+  assert.equal(NL.normalizeBarcode(' 0 12345 67890 5 '), '012345678905');
+  assert.equal(NL.normalizeBarcode('12345'), null, 'too short');
+  assert.equal(NL.normalizeBarcode('oatmeal'), null);
+  assert.equal(NL.normalizeBarcode('1234567890'), null, '10 digits is not a retail barcode');
+  assert.ok(NL.sameBarcode('012345678905', '0012345678905'));
+  assert.ok(NL.sameBarcode('00012345678905', '012345678905'));
+  assert.ok(!NL.sameBarcode('012345678905', '012345678912'));
+});
+
+test('Open Food Facts products become foods per 100 g, with unknowns left null', () => {
+  const p = {
+    code: '0012345678905', product_name: 'Crunchy Peanut Butter', brands: 'Acme Foods, Acme',
+    serving_size: '2 tbsp (32 g)', serving_quantity: 32, quantity: '16 oz (454 g)', product_quantity: 454,
+    nutriments: {
+      'energy-kcal_100g': 588, proteins_100g: 25, fat_100g: 50, carbohydrates_100g: 20, fiber_100g: 6, sugars_100g: 9,
+      'saturated-fat_100g': 10, cholesterol_100g: 0, sodium_100g: 0.43, calcium_100g: 0.04, iron_100g: 0.0019,
+      'vitamin-d_100g': 0, potassium_100g: 0.56, 'vitamin-a_100g': '',
+    },
+  };
+  const f = NL.fromOff(p, '012345678905');
+  const v = (k) => f.per100[NL.KEYS.indexOf(k)];
+  assert.equal(f.id, 'bc_012345678905');
+  assert.equal(f.kind, 'barcode');
+  assert.equal(f.name, 'Crunchy Peanut Butter (Acme Foods)');
+  assert.equal(v('kcal'), 588);
+  assert.equal(v('sodium'), 430, 'grams → mg');
+  assert.equal(v('iron'), 1.9);
+  assert.equal(v('calcium'), 40);
+  assert.equal(v('chol'), 0, 'a real zero stays zero');
+  assert.equal(v('vitA'), null, 'blank is unknown');
+  assert.equal(v('magnesium'), null, 'missing is unknown');
+  assert.deepEqual(f.portions, [[32, '1 serving (2 tbsp)'], [454, '1 package (16 oz)']]);
+});
+
+test('Open Food Facts: kJ-only energy, salt instead of sodium, and products without nutrition', () => {
+  const f = NL.fromOff({ product_name: 'Crackers', nutriments: { 'energy-kj_100g': 1841, salt_100g: 1.5, proteins_100g: 9, fat_100g: 12 } }, '4006381333931');
+  close(f.per100[0], 440, 0.01);
+  close(f.per100[NL.KEYS.indexOf('sodium')], 600, 0.001);
+  assert.equal(NL.fromOff({ product_name: 'Mystery', nutriments: {} }, '4006381333931'), null);
+  assert.equal(NL.fromOff(null, '4006381333931'), null);
+});

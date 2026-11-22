@@ -8,10 +8,10 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://srvhbqhuabepnisdvveg.supabase.co wss://srvhbqhuabepnisdvveg.supabase.co https://api.nal.usda.gov; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://srvhbqhuabepnisdvveg.supabase.co wss://srvhbqhuabepnisdvveg.supabase.co https://api.nal.usda.gov https://world.openfoodfacts.org; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Content-Type-Options = "nosniff"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=()"
 
 # The service worker must always be re-checked, or phones could stay on an old version.
 [[headers]]

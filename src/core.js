@@ -947,6 +947,74 @@
       name: item.description + (brand ? ` (${titleCase(brand)})` : ''), dataType: item.dataType, per100, portions,
     };
   }
+  // ---------------------------------------------------------------------------
+  // Barcodes (UPC / EAN) and Open Food Facts
+  // ---------------------------------------------------------------------------
+  /** Digits only; null unless it looks like a retail barcode (UPC-E 8, UPC-A 12, EAN-13, GTIN-14). */
+  function normalizeBarcode(s) {
+    const d = String(s == null ? '' : s).replace(/[\s-]/g, '');
+    return /^\d{8}$|^\d{12,14}$/.test(d) ? d : null;
+  }
+  /** The same product can be written as UPC-A (12), EAN-13 (0 + UPC) or GTIN-14: compare without leading zeros. */
+  function barcodeKey(s) { const d = normalizeBarcode(s); return d ? d.replace(/^0+/, '') : null; }
+  function sameBarcode(a, b) { const x = barcodeKey(a); return !!x && x === barcodeKey(b); }
+
+  // Open Food Facts stores *_100g values in grams for mass nutrients (kcal for energy).
+  const OFF_FIELDS = {
+    protein: 'proteins', fat: 'fat', carbs: 'carbohydrates', fiber: 'fiber', sugar: 'sugars', satfat: 'saturated-fat',
+    mufa: 'monounsaturated-fat', pufa: 'polyunsaturated-fat', chol: 'cholesterol', vitA: 'vitamin-a', vitC: 'vitamin-c',
+    vitD: 'vitamin-d', vitE: 'vitamin-e', vitK: 'vitamin-k', thiamin: 'vitamin-b1', riboflavin: 'vitamin-b2', niacin: 'vitamin-pp',
+    panto: 'pantothenic-acid', b6: 'vitamin-b6', folate: ['vitamin-b9', 'folates'], b12: 'vitamin-b12', choline: 'choline',
+    calcium: 'calcium', iron: 'iron', magnesium: 'magnesium', phosphorus: 'phosphorus', potassium: 'potassium', sodium: 'sodium',
+    zinc: 'zinc', copper: 'copper', manganese: 'manganese', selenium: 'selenium',
+  };
+  const UNIT_FACTOR = { g: 1, mg: 1e3, 'µg': 1e6 };
+  /** "2 tbsp (32 g)" → "2 tbsp"; "32 g" → "" (the picker already shows grams). */
+  function plainSize(s) {
+    const t = String(s || '').trim().replace(/\s*\(\s*[\d.,]+\s*(g|ml)\s*\)\s*$/i, '').trim();
+    return /^[\d.,]+\s*(g|ml)$/i.test(t) ? '' : t;
+  }
+  /** Open Food Facts product → a food like the others (per 100 g, null = unknown). Returns null without usable nutrition. */
+  function fromOff(product, code) {
+    if (!product) return null;
+    const n = product.nutriments || {};
+    const num = (v) => (v === '' || v == null || !isFinite(Number(v)) ? null : Number(v));
+    const per100 = NUTRIENTS.map((nu) => {
+      if (nu.key === 'kcal') {
+        const kcal = num(n['energy-kcal_100g']);
+        if (kcal != null) return kcal;
+        const kj = num(n['energy-kj_100g']) != null ? num(n['energy-kj_100g']) : num(n.energy_100g);
+        return kj == null ? null : kj / 4.184;
+      }
+      const fields = [].concat(OFF_FIELDS[nu.key] || []);
+      for (const f of fields) {
+        const v = num(n[f + '_100g']);
+        if (v != null) return v * UNIT_FACTOR[nu.unit];
+      }
+      if (nu.key === 'sodium' && num(n.salt_100g) != null) return (num(n.salt_100g) / 2.5) * 1000;
+      return null;
+    }).map((v) => (v == null ? null : Math.round(v * 1000) / 1000));
+    const known = ['kcal', 'protein', 'fat', 'carbs'].filter((k) => per100[KEYS.indexOf(k)] != null).length;
+    if (per100[0] == null || known < 2) return null;
+    const portions = [];
+    const sq = num(product.serving_quantity);
+    const unitOk = (u) => !u || /^(g|ml)$/i.test(u);
+    if (sq > 0 && sq < 3000 && unitOk(product.serving_quantity_unit)) {
+      const ss = plainSize(product.serving_size);
+      portions.push([sq, ss ? `1 serving (${ss})` : '1 serving']);
+    }
+    const pq = num(product.product_quantity);
+    if (pq > 0 && pq < 5000 && unitOk(product.product_quantity_unit) && !(sq && Math.abs(pq - sq) < 1)) {
+      const qs = plainSize(product.quantity);
+      portions.push([pq, qs ? `1 package (${qs})` : '1 package']);
+    }
+    const rawName = String(product.product_name_en || product.product_name || product.generic_name_en || product.generic_name || '').trim();
+    const brand = String(product.brands || '').split(',')[0].trim();
+    const name = (rawName || 'Scanned product') + (brand && !rawName.toLowerCase().includes(brand.toLowerCase()) ? ` (${brand})` : '');
+    const barcode = normalizeBarcode(code || product.code) || String(code || product.code || '');
+    return { id: 'bc_' + barcode, src: 'my', kind: 'barcode', barcode, source: 'Open Food Facts', name, per100, portions };
+  }
+
   function titleCase(s) { return String(s).toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase()); }
 
   // ---------------------------------------------------------------------------
@@ -1045,7 +1113,7 @@
   const api = {
     NUTRIENTS, KEYS, BY_KEY, CATEGORIES, MEALS, STATES, ACTIVITY, GOALS, DEFAULT_PROFILE, ALIASES,
     energyTarget, computeTargets, status, report, FoodDB, portionsFor, scale, sumEntries, contributors,
-    suggestFoods, parseMeal, parseAmount, gramsPerUnit, defaultUnit, splitItems, ymd, parseYmd, addDays,
+    suggestFoods, normalizeBarcode, barcodeKey, sameBarcode, fromOff, parseMeal, parseAmount, gramsPerUnit, defaultUnit, splitItems, ymd, parseYmd, addDays,
     daysBetween, trend, insights, fromFdc, customFood, recipeFood, sampleEntries, fmt, round1, tokenize, splitName,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

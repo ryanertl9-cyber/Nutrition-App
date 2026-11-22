@@ -20,6 +20,7 @@ export const PRECACHE = {
   '/src/app.js': 'src/app.js',
   '/src/config.js': 'src/config.js',
   '/src/vendor/supabase-2.119.0.js': 'src/vendor/supabase-2.119.0.js',
+  '/src/vendor/zxing-library-0.23.0.min.js': 'src/vendor/zxing-library-0.23.0.min.js',
   '/data/foods.json': 'data/foods.json',
   '/assets/landing.js': 'assets/landing.js',
   '/manifest.webmanifest': 'manifest.webmanifest',

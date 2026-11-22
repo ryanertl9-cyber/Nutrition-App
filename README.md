@@ -5,6 +5,7 @@ A nutrition tracker that shows at a glance which of your daily nutrient targets 
 - **Scoreboard first.** "17 of 29 targets met", a status bar, and the short list of nutrients that need attention.
 - **Gap closer.** Tap a nutrient to see which foods it came from, and which everyday foods would close the gap. Each suggestion can be added with one tap.
 - **Target map.** A heatmap of every nutrient by day (or week), with a days-on-target ranking and plain-language insights.
+- **Barcode scanning.** On phones, tap Scan and point the camera at a package. Products come from Open Food Facts, with USDA branded foods as a backup, and are saved to My foods so they work offline next time. Anyone can also type the barcode number into search. Unknown products can be added once from the label.
 - **Fast logging.** Type "2 eggs, 1 cup oatmeal and a banana". Re-add recent foods in one tap, copy yesterday's meal, save a whole meal and log it again in one tap, and save recipes and custom foods.
 - **Trustworthy data.** 14,220 built-in USDA foods: 8,789 lab-analysed reference foods (SR28) plus 5,431 everyday foods as eaten (FNDDS 2021–2023), ranked by how often Americans report eating them (CDC NHANES 2021–2023). Optional live search of USDA FoodData Central. Unknown values are flagged, never counted as zero.
 - **Accounts and sync.** Use it as a guest (data stays in the browser) or create a free account (email and password) to sync your log across devices. Accounts run on Supabase with row-level security, so each person can only read their own data.
@@ -51,7 +52,7 @@ npm run test:e2e
 npm run test:accounts
 ```
 
-`npm test` runs 51 unit tests for the core logic and the sync engine (`node --test`). `npm run test:e2e` runs 38 browser checks of guest mode with Playwright: logging, editing, recipes, custom foods, online search (mocked), trends, export and import, reload persistence, phone layout and dark mode. `npm run test:accounts` runs 20 browser checks of accounts against a fake Supabase: sign-up, email confirmation, guest import, two-device sync, offline recovery, isolation between users, sign-out, password reset and account deletion. Both browser suites send the same Content-Security-Policy as the live site.
+`npm test` runs 54 unit tests for the core logic and the sync engine (`node --test`). `npm run test:e2e` runs 38 browser checks of guest mode with Playwright: logging, editing, recipes, custom foods, online search (mocked), trends, export and import, reload persistence, phone layout and dark mode. `npm run test:accounts` runs 20 browser checks of accounts against a fake Supabase: sign-up, email confirmation, guest import, two-device sync, offline recovery, isolation between users, sign-out, password reset and account deletion. `npm run test:barcode` runs 10 browser checks of barcode scanning with a generated barcode video as the phone camera and mocked Open Food Facts/USDA: scanning, offline re-scan, typed numbers on desktop, unknown products, unreachable databases, a blocked camera, and that the camera turns off. The browser suites send the same Content-Security-Policy as the live site.
 
 ## How it works
 
@@ -74,7 +75,8 @@ npm run test:accounts
 | Screen | Purpose |
 |---|---|
 | Today | Date bar with a calendar to jump to any day (logged days are dotted). Scoreboard (count met, status bar, calories and macros, Needs attention, all nutrients with filter), natural-language entry, and meals with entries. |
-| Add food (sheet) | Search, Recent, Meals and My foods tabs. The portion picker shows a live preview of the food's contribution to each target. Online USDA search is available here. |
+| Add food (sheet) | Search, Recent, Meals and My foods tabs, plus Scan on phones (typing a barcode number into search works everywhere). The portion picker shows a live preview of the food's contribution to each target. Online USDA search is available here. |
+| Scan barcode (sheet) | Live camera with a guide box, or a typed number. Found products open the portion picker; unknown ones can be added from the label. |
 | Nutrient detail (sheet) | Amount against target, the basis for the target, a missing-data warning, top sources, and gap-closing foods with "+ Add". |
 | Trends | Range of 1 week, 4 weeks, 3 months or 6 months. Tiles, insights, target map, days on target, and a nutrient chart. |
 | My foods | Saved meals (log, rename, trim, delete), custom foods (from a label), recipes (from ingredients, per serving) and saved online foods. |
@@ -93,7 +95,7 @@ Profile   { sex, age, heightCm, weightKg, activity, goal }
 Overrides { [nutrientKey]: { target?, max? } }
 Entry     { id, date: 'YYYY-MM-DD', meal, src: 'sr' | 'my', fid, name, qty, unit, unitGrams, grams }
 Food      { id, src, name, per100: number|null[33], portions: [grams, label][] }   // SR28 foods are read-only
-MyFood    Food + { kind: 'custom' | 'recipe' | 'usda', servings?, ingredients?, fdcId? }
+MyFood    Food + { kind: 'custom' | 'recipe' | 'usda' | 'barcode', servings?, ingredients?, fdcId?, barcode?, source? }
 SavedMeal { id, kind: 'meal', name, mealHint, items: Entry-like[], uses }   // synced through the foods table
 Settings  { apiKey, units: 'us' | 'metric' }
 ```
@@ -111,7 +113,7 @@ src/core.js         pure logic: nutrients, DRIs, targets, status, search, parser
 src/app.js          UI: rendering, events, sheets, storage, export/import, accounts
 src/sync.js         local-first sync engine (diff, pull/merge, batched push) + Supabase adapter
 src/config.js       public Supabase settings for the hosted site
-src/vendor/         supabase-js 2.119.0 (MIT), served from the site itself
+src/vendor/         supabase-js 2.119.0 (MIT) and ZXing 0.23.0 (Apache-2.0, barcode decoder, loaded only when scanning), served from the site itself
 supabase/schema.sql tables, row-level security and delete_account()
 privacy.html, terms.html  legal pages (review before launch)
 netlify.toml        hosting config and security headers
@@ -127,7 +129,7 @@ There are no runtime dependencies. Online search calls `api.nal.usda.gov/fdc/v1/
 | | Features |
 |---|---|
 | **MVP (this release)** | Profile-based DRI targets, overrides, scoreboard, gap closer, natural-language entry, search, recent, copy meal, custom foods, recipes, online USDA search, target map, insights, charts, export/import, light and dark themes. |
-| **v2** | Sign in with Google/Apple, barcode scanning via Open Food Facts, weight log with adaptive energy target, an optional AI parser for messy text and photos, highlighted-nutrient picker, more nutrients (omega-3, iodine) via FoodData Central Foundation Foods. |
+| **v2** | Sign in with Google/Apple, weight log with adaptive energy target, an optional AI parser for messy text and photos, highlighted-nutrient picker, more nutrients (omega-3, iodine) via FoodData Central Foundation Foods. |
 | **Future** | Clinician share view, pregnancy and lactation DRIs, meal planning toward gaps, reminders. |
 
 ## Risks and open questions
@@ -143,4 +145,6 @@ There are no runtime dependencies. Online search calls `api.nal.usda.gov/fdc/v1/
 - Food composition: U.S. Department of Agriculture, Agricultural Research Service, Nutrient Data Laboratory, *USDA National Nutrient Database for Standard Reference, Release 28* (2015), and USDA ARS Food Surveys Research Group, *Food and Nutrient Database for Dietary Studies 2021–2023*. Pantothenic acid and manganese for FNDDS foods are estimated from their SR28 ingredients when those cover at least 90% of the weight.
 - Popularity: CDC National Center for Health Statistics, *NHANES 2021–2023* dietary interview, individual foods (days 1 and 2), survey-weighted report counts. This is a public-domain U.S. government work. The raw files in `vendor/sr28` come from the MIT-licensed `fda-nutrient-database` npm package.
 - Online search: USDA FoodData Central API (public domain data; free api.data.gov key).
+- Barcode lookups: [Open Food Facts](https://world.openfoodfacts.org/), available under the Open Database License (ODbL); product data is fetched per scan and kept only in the user's own log.
+- Barcode decoding on iPhone and desktop browsers: [ZXing for JS](https://github.com/zxing-js/library) 0.23.0, Apache License 2.0 (`src/vendor/zxing-LICENSE.txt`). Chrome on Android uses the browser's built-in BarcodeDetector.
 - App code: MIT.

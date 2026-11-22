@@ -13,7 +13,8 @@
     "test:accounts": "node tests/e2e-accounts.cjs",
     "build:sw": "node scripts/build-sw.mjs",
     "build": "node scripts/build-sw.mjs && node scripts/build-artifact.mjs",
-    "test:pwa": "node tests/e2e-pwa.cjs"
+    "test:pwa": "node tests/e2e-pwa.cjs",
+    "test:barcode": "node tests/e2e-barcode.cjs"
   },
   "devDependencies": {
     "playwright": "^1.48.0"

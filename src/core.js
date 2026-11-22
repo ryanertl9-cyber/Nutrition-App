@@ -915,6 +915,33 @@
     return out;
   }
 
+  /** Plain-language summary of calories, protein, carbs, fat and fiber only (the "Macros only" view of Trends). */
+  const MACRO_KEYS = ['kcal', 'protein', 'carbs', 'fat', 'fiber'];
+  function macroInsights(tr, targets) {
+    const out = [];
+    if (tr.logged < 2) return out;
+    const n = tr.logged;
+    const tone = (p) => (p.adherence >= 0.8 ? 'met' : p.adherence >= 0.5 ? 'near' : 'low');
+    for (const key of MACRO_KEYS) {
+      const p = tr.perNutrient[BY_KEY[key].index];
+      const t = targets[key];
+      if (!t || t.target == null) continue;
+      const days = `${p.metDays} of ${n} logged days`;
+      if (key === 'kcal') {
+        const diff = Math.round(p.avg - t.target);
+        const where = Math.abs(diff) <= t.target * 0.03 ? 'right on' : `${fmt(Math.abs(diff))} ${diff > 0 ? 'above' : 'below'}`;
+        out.push({ tone: tone(p), key, text: `Calories averaged ${fmt(p.avg)} kcal, ${where} your ${fmt(t.target)} kcal target, and were on target ${days}.` });
+      } else if (p.kind === 'range') {
+        const lean = p.avg < t.target * 0.9 ? ', mostly under' : t.max != null && p.avg > t.max ? ', mostly over' : '';
+        out.push({ tone: tone(p), key, text: `${p.name} ${key === 'carbs' ? 'were' : 'was'} in your target range ${days}${lean} (average ${fmt(p.avg)} g, target ${fmt(t.target)} g).` });
+      } else {
+        out.push({ tone: tone(p), key, text: `${p.name} met your ${fmt(t.target)} g target ${days} (average ${fmt(p.avg)} g).` });
+      }
+    }
+    if (tr.logged < tr.span) out.push({ tone: 'info', text: `${tr.span - tr.logged} of ${tr.span} days have no entries and are left out of the averages.` });
+    return out;
+  }
+
   // ---------------------------------------------------------------------------
   // USDA FoodData Central (live search) → app food shape.
   // ---------------------------------------------------------------------------
@@ -1113,7 +1140,7 @@
   const api = {
     NUTRIENTS, KEYS, BY_KEY, CATEGORIES, MEALS, STATES, ACTIVITY, GOALS, DEFAULT_PROFILE, ALIASES,
     energyTarget, computeTargets, status, report, FoodDB, portionsFor, scale, sumEntries, contributors,
-    suggestFoods, normalizeBarcode, barcodeKey, sameBarcode, fromOff, parseMeal, parseAmount, gramsPerUnit, defaultUnit, splitItems, ymd, parseYmd, addDays,
+    suggestFoods, MACRO_KEYS, macroInsights, normalizeBarcode, barcodeKey, sameBarcode, fromOff, parseMeal, parseAmount, gramsPerUnit, defaultUnit, splitItems, ymd, parseYmd, addDays,
     daysBetween, trend, insights, fromFdc, customFood, recipeFood, sampleEntries, fmt, round1, tokenize, splitName,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

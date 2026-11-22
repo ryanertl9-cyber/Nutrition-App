@@ -203,6 +203,21 @@ test('insights call out chronic gaps and unlogged days', () => {
   assert.ok(ins.some((i) => i.key === 'kcal'));
 });
 
+test('macro insights talk only about calories, protein, carbs, fat and fiber', () => {
+  const t = NL.computeTargets(NL.DEFAULT_PROFILE);
+  const entries = NL.sampleEntries(db, '2026-11-21', 28);
+  const byDate = new Map();
+  for (const e of entries) { if (!byDate.has(e.date)) byDate.set(e.date, []); byDate.get(e.date).push(e); }
+  const tr = NL.trend(byDate, (e) => db.get(e.fid), t, '2026-10-25', '2026-11-20', 'day');
+  const ins = NL.macroInsights(tr, t);
+  const keys = ins.filter((i) => i.key).map((i) => i.key);
+  assert.deepEqual(keys, ['kcal', 'protein', 'carbs', 'fat', 'fiber']);
+  assert.ok(ins.every((i) => !/vitamin|iron|sodium|calcium/i.test(i.text)));
+  assert.match(ins[0].text, /^Calories averaged [\d,]+ kcal, .* target, and were on target \d+ of \d+ logged days\.$/);
+  assert.match(ins.find((i) => i.key === 'protein').text, /^Protein met your [\d.]+ g target \d+ of \d+ logged days \(average [\d.]+ g\)\.$/);
+  assert.deepEqual(NL.macroInsights({ logged: 1, span: 7, perNutrient: tr.perNutrient }, t), [], 'needs two logged days');
+});
+
 test('USDA FoodData Central results map onto the app nutrients', () => {
   const f = NL.fromFdc({
     fdcId: 123, description: 'Test bar', dataType: 'Branded', brandOwner: 'ACME FOODS', servingSize: 40, servingSizeUnit: 'g',

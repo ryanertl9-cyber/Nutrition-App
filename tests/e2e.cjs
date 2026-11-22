@@ -367,6 +367,29 @@ async function step(name, fn) {
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'e2e-trends-6m.png'), fullPage: true });
   });
 
+  await step('Trends has a "Macros only" view that stays in step with the Today scorecard', async () => {
+    await page.click('[data-tab="trends"]');
+    await page.click('[data-action="range"][data-range="4w"]');
+    const rowCount = () => page.locator('.heat tbody tr').count();
+    assert.ok((await rowCount()) > 20, 'all nutrients to start');
+    await page.click('[data-action="score-view"][data-view="macros"]');
+    const rows = await page.$$eval('.heat tbody th', (t) => t.map((x) => x.textContent));
+    assert.deepEqual(rows.slice().sort(), ['Calories', 'Carbs', 'Fat', 'Fiber', 'Protein']);
+    const opts = await page.$$eval('#chart-key option', (o) => o.map((x) => x.value));
+    assert.deepEqual(opts.slice().sort(), ['carbs', 'fat', 'fiber', 'kcal', 'protein']);
+    const insights = await page.textContent('.insights');
+    assert.match(insights, /Protein met your/);
+    assert.doesNotMatch(insights, /Vitamin|Iron|Sodium|Calcium|Potassium/);
+    assert.equal(await page.locator('.adh').count(), 5, 'days-on-target ranking lists the five');
+    assert.match(await page.textContent('.tiles'), /Average protein/);
+    await page.click('[data-tab="today"]');
+    assert.ok(await page.evaluate(() => document.querySelector('.score').classList.contains('macro-mode')), 'Today folded too');
+    await page.click('[data-action="toggle-micros"]');
+    await page.click('[data-tab="trends"]');
+    assert.ok((await rowCount()) > 20, 'unfolding on Today brings everything back on Trends');
+    assert.equal(await page.getAttribute('[data-action="score-view"][data-view="all"]', 'aria-pressed'), 'true');
+  });
+
   await step('heatmap day opens that day on Today', async () => {
     await page.click('[data-action="range"][data-range="1w"]');
     const d = await page.getAttribute('.heat [data-action="goto-day"] >> nth=0', 'data-date');

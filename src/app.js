@@ -356,15 +356,24 @@
     const end = NL.addDays(S.today, -1);
     const start = NL.addDays(end, -(R.days - 1));
     const tr = NL.trend(byDate, resolve, targets, start, end, R.bucket);
-    const ins = NL.insights(tr, targets);
-    const tracked = tr.perNutrient.filter((p) => p.state !== 'info');
+    const macrosOnly = S.data.settings.scoreView === 'macros';
+    const inView = (p) => !macrosOnly || p.cat === 'energy' || p.cat === 'macro';
+    const ins = macrosOnly ? NL.macroInsights(tr, targets) : NL.insights(tr, targets);
+    const tracked = tr.perNutrient.filter((p) => p.state !== 'info' && inView(p));
     const worst = tracked.filter((p) => p.cat !== 'energy').slice().sort((a, b) => a.adherence - b.adherence)[0];
     const kc = tr.perNutrient[NL.BY_KEY.kcal.index];
-    const seg = `<div class="seg" role="group" aria-label="Time range">${Object.entries(RANGES).map(([k, r]) => `<button data-action="range" data-range="${k}" aria-pressed="${S.range === k}">${r.name}</button>`).join('')}</div>`;
+    const seg = `<div class="trend-ctrls"><div class="seg" role="group" aria-label="Nutrients shown">${[['all', 'All nutrients'], ['macros', 'Macros only']].map(([k, n]) => `<button data-action="score-view" data-view="${k}" aria-pressed="${(k === 'macros') === macrosOnly}">${n}</button>`).join('')}</div><div class="seg" role="group" aria-label="Time range">${Object.entries(RANGES).map(([k, r]) => `<button data-action="range" data-range="${k}" aria-pressed="${S.range === k}">${r.name}</button>`).join('')}</div></div>`;
     if (!tr.logged) {
       return `<div class="section-head"><h2>Trends</h2>${seg}</div><div class="card"><p class="empty">No meals logged in the last ${R.name}. Log a few days and your patterns show up here.</p></div>`;
     }
-    const tiles = `<div class="tiles">
+    const macroRows = tr.perNutrient.filter((p) => p.cat === 'energy' || p.cat === 'macro');
+    const pr = tr.perNutrient[NL.BY_KEY.protein.index];
+    const tiles = macrosOnly ? `<div class="tiles">
+      <div class="tile"><div class="eyebrow">Macro targets met per day</div><div class="v">${fmt(macroRows.reduce((a, p) => a + p.metDays, 0) / tr.logged)}<span class="muted" style="font-size:1rem"> / ${macroRows.length}</span></div><div class="small muted">calories, protein, carbs, fat, fiber</div></div>
+      <div class="tile"><div class="eyebrow">Days logged</div><div class="v">${tr.logged}<span class="muted" style="font-size:1rem"> / ${tr.span}</span></div><div class="small muted">${pct(tr.logged / tr.span)} of the last ${R.name}</div></div>
+      <div class="tile"><div class="eyebrow">Average calories</div><div class="v">${fmt(kc.avg)}</div><div class="small"><span class="dot s-${kc.state}">${GLYPH[kc.state]}</span> target ${fmt(targets.kcal.target)} kcal</div></div>
+      <div class="tile"><div class="eyebrow">Average protein</div><div class="v">${fmt(pr.avg)}<span class="muted" style="font-size:1rem"> g</span></div><div class="small"><span class="dot s-${pr.state}">${GLYPH[pr.state]}</span> target ${fmt(targets.protein.target)} g · met ${pr.metDays} of ${tr.logged} days</div></div>
+    </div>` : `<div class="tiles">
       <div class="tile"><div class="eyebrow">Targets met per day</div><div class="v">${fmt(tr.avgMet)}<span class="muted" style="font-size:1rem"> / ${tr.total}</span></div><div class="small muted">average over logged days</div></div>
       <div class="tile"><div class="eyebrow">Days logged</div><div class="v">${tr.logged}<span class="muted" style="font-size:1rem"> / ${tr.span}</span></div><div class="small muted">${pct(tr.logged / tr.span)} of the last ${R.name}</div></div>
       <div class="tile"><div class="eyebrow">Average calories</div><div class="v">${fmt(kc.avg)}</div><div class="small"><span class="dot s-${kc.state}">${GLYPH[kc.state]}</span> target ${fmt(targets.kcal.target)} kcal</div></div>
@@ -398,16 +407,17 @@
     const heat = `<div class="heat-wrap"><table class="heat"><thead><tr><th></th>${head}</tr></thead><tbody>${body}</tbody></table></div>
       <div class="legend" style="margin-top:8px">${['met', 'near', 'low', 'over'].map((s) => `<span><span class="sq bg-${s}"></span> ${STATE_WORD[s]}</span>`).join('')}<span><span class="sq none"></span> Not logged</span></div>`;
 
-    const adh = tracked.filter((p) => p.cat !== 'energy').slice().sort((a, b) => a.adherence - b.adherence).map((p) => `
+    const adh = tracked.filter((p) => macrosOnly || p.cat !== 'energy').slice().sort((a, b) => a.adherence - b.adherence).map((p) => `
       <div class="adh"><button class="btn ghost small" style="justify-content:flex-start;padding:2px 4px" data-action="chart-key" data-key="${p.key}">${esc(p.name)}</button><div class="bar"><div class="fill bg-${p.adherence >= 0.8 ? 'met' : p.adherence >= 0.5 ? 'near' : 'low'}" style="width:${(p.adherence * 100).toFixed(1)}%"></div></div><span class="num small" style="text-align:right">${pct(p.adherence)}</span></div>`).join('');
 
-    const chartOpts = NL.NUTRIENTS.map((n) => `<option value="${n.key}" ${n.key === S.chartKey ? 'selected' : ''}>${esc(n.name)}</option>`).join('');
+    const chartKey = macrosOnly && !NL.MACRO_KEYS.includes(S.chartKey) ? 'kcal' : S.chartKey;
+    const chartOpts = NL.NUTRIENTS.filter((n) => !macrosOnly || NL.MACRO_KEYS.includes(n.key)).map((n) => `<option value="${n.key}" ${n.key === chartKey ? 'selected' : ''}>${esc(n.name)}</option>`).join('');
     return `<div class="section-head"><h2>Trends</h2>${seg}</div>
       ${tiles}
       <div class="trend-grid">
         <div>
           <section class="card"><div class="section-head"><h2>Target map</h2><span class="small muted">${R.bucket === 'week' ? 'Weekly averages' : 'Each square is one day; tap to open it'} · through yesterday</span></div>${heat}</section>
-          <section class="card chart"><div class="section-head"><h2>${esc(NL.BY_KEY[S.chartKey].name)} over time</h2><select class="input" id="chart-key" style="width:auto" aria-label="Nutrient to chart">${chartOpts}</select></div>${chartSVG(tr, S.chartKey, R)}</section>
+          <section class="card chart"><div class="section-head"><h2>${esc(NL.BY_KEY[chartKey].name)} over time</h2><select class="input" id="chart-key" style="width:auto" aria-label="Nutrient to chart">${chartOpts}</select></div>${chartSVG(tr, chartKey, R)}</section>
         </div>
         <div>
           <section class="card"><h2 style="margin-bottom:10px">What stands out</h2>${insightsHTML}</section>
@@ -1299,6 +1309,7 @@
         return;
       }
       case 'range': S.range = a.dataset.range; render(); return;
+      case 'score-view': S.data.settings.scoreView = a.dataset.view === 'macros' ? 'macros' : 'all'; save(); render(); return;
       case 'chart-key': S.chartKey = a.dataset.key; render(); return;
       case 'detail': if (a.dataset.range) S.date = S.today; openSheet({ type: 'detail', key: a.dataset.key }); return;
       case 'start-own':

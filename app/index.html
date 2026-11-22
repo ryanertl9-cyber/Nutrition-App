@@ -331,6 +331,12 @@ body::before { background: var(--bg); }
 .score .nrow:hover { background: #e9e2d3; }
 
 /* Fold: "Macros only" collapses the micronutrient parts and enlarges the macros. */
+.trend-ctrls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+@media (max-width: 600px) {
+  .trend-ctrls { width: 100%; justify-content: stretch; }
+  .trend-ctrls .seg { width: 100%; }
+  .trend-ctrls .seg button { flex: 1; padding-inline: 6px; }
+}
 /* Date controls live on the scoreboard (one date on screen, in the scoreboard's own type). */
 .score-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
 .day-ctrls { display: flex; align-items: center; gap: 4px; }

@@ -429,7 +429,8 @@ async function step(name, fn) {
     await lp.goto(url);
     assert.equal(new URL(lp.url()).pathname, '/');
     assert.match(await lp.textContent('h1'), /A stat sheet of what you eat/);
-    assert.ok(await lp.isVisible('.label'));
+    assert.ok(await lp.isVisible('.hero-shot img'), 'hero shows the app screenshot');
+    assert.ok(await lp.evaluate(() => { const i = document.querySelector('.hero-shot img'); return i.complete && i.naturalWidth > 0; }), 'hero screenshot loaded');
     assert.equal(await lp.getAttribute('.hero .btn.primary', 'href'), '/app/');
     for (const img of await lp.locator('img').all()) {
       await img.scrollIntoViewIfNeeded();

@@ -107,7 +107,7 @@ On the server, each record is a row with `user_id`, `id`, a `data` JSON column, 
 ## Architecture
 
 ```text
-index.html          landing page (Nutrition Facts hero); assets/landing.js sends returning users to /app/
+index.html          landing page (hero screenshot of Trends; phones get a phone-sized one); assets/landing.js sends returning users to /app/
 app/index.html      the app: markup shell + CSS (light/dark tokens)
 src/core.js         pure logic: nutrients, DRIs, targets, status, search, parser, trends, insights, FDC mapping
 src/app.js          UI: rendering, events, sheets, storage, export/import, accounts

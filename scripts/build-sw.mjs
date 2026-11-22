@@ -32,6 +32,8 @@ export const PRECACHE = {
   '/assets/landing/scoreboard.webp': 'assets/landing/scoreboard.webp',
   '/assets/landing/gap.webp': 'assets/landing/gap.webp',
   '/assets/landing/map.webp': 'assets/landing/map.webp',
+  '/assets/landing/trends-1280.webp': 'assets/landing/trends-1280.webp',
+  '/assets/landing/trends-phone.webp': 'assets/landing/trends-phone.webp',
 };
 
 export function computeVersion() {

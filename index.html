@@ -31,7 +31,6 @@
   --line: rgb(255 255 255 / 9%); --line-strong: rgb(255 255 255 / 18%);
   --accent: #2997ff; --pill: #f5f5f7; --pill-ink: #000000;
   --met: #34c77b; --near: #f5b742; --low: #ff6b3d; --over: #ff4d8d;
-  --label-paper: #ffffff; --label-ink: #111111;
   --display: "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --body: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --safe-top: env(safe-area-inset-top, 0px);
@@ -73,7 +72,9 @@ nav.top .btn { white-space: nowrap; }
 /* Hero */
 .hero { position: relative; overflow: hidden; }
 .hero::before { content: ""; position: absolute; inset: -20% -10% auto auto; width: 70vw; max-width: 900px; aspect-ratio: 1; background: radial-gradient(closest-side, rgb(41 151 255 / 22%), rgb(52 199 123 / 8%) 55%, transparent 75%); pointer-events: none; }
-.hero .wrap { position: relative; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 56px; align-items: center; padding-block: 96px 112px; }
+.hero .wrap { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 56px; align-items: center; padding-block: 96px 112px; }
+.hero-shot { margin: 0; border-radius: 18px; overflow: hidden; border: 1px solid rgb(255 255 255 / 12%); box-shadow: 0 0 0 1px rgb(255 255 255 / 4%), 0 40px 120px rgb(139 92 246 / 22%), 0 30px 60px rgb(0 0 0 / 60%); }
+.hero-shot img { display: block; width: 100%; height: auto; }
 .hero h1 { font-size: clamp(2.8rem, 6.4vw, 5.2rem); font-weight: 700; margin: 18px 0 22px; }
 .hero h1 em { font-style: normal; background: linear-gradient(90deg, #8b5cf6, #a78bfa 45%, #d8b4fe); /* purple, matching the app's accent */ -webkit-background-clip: text; background-clip: text; color: transparent; }
 .hero p.lede { font-size: 1.2rem; line-height: 1.5; color: var(--muted); max-width: 32em; margin: 0 0 34px; }
@@ -83,21 +84,6 @@ nav.top .btn { white-space: nowrap; }
 @media (max-width: 880px) { .hero .wrap { grid-template-columns: minmax(0, 1fr); gap: 56px; padding-block: 64px 80px; } }
 
 /* The Nutrition Facts panel */
-.label { position: relative; background: var(--label-paper); color: var(--label-ink); border: 2px solid var(--label-ink); padding: 8px 10px 10px; font: 15px/1.3 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: 0; max-width: 370px; width: 100%; justify-self: center; box-shadow: 0 0 0 1px rgb(255 255 255 / 6%), 0 40px 120px rgb(41 151 255 / 18%), 0 30px 60px rgb(0 0 0 / 60%); }
-.label h2 { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-weight: 900; font-size: 2.5rem; letter-spacing: -.02em; line-height: 1; margin: 0; color: var(--label-ink); }
-.label .serv { border-bottom: 1px solid var(--label-ink); padding: 2px 0 4px; }
-.label .serv .big { font-weight: 800; font-size: 1.05rem; display: flex; justify-content: space-between; gap: 10px; }
-.label .bar-xl { height: 11px; background: var(--label-ink); margin: 2px -10px 2px; }
-.label .bar-m { height: 5px; background: var(--label-ink); margin: 3px 0; }
-.label .r { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--label-ink); padding: 3px 0; }
-.label .r.first { border-top: 0; }
-.label .r b { font-weight: 800; }
-.label .amount { font-weight: 800; font-size: .85rem; padding-top: 3px; }
-.label .cal { display: flex; justify-content: space-between; align-items: baseline; font-weight: 900; letter-spacing: -.02em; }
-.label .cal span:first-child { font-size: 1.75rem; }
-.label .cal span:last-child { font-size: 2.6rem; line-height: 1; }
-.label .dvh { text-align: right; font-weight: 800; font-size: .85rem; border-top: 0; padding: 2px 0; }
-.label .foot { font-size: .72rem; line-height: 1.35; padding-top: 5px; }
 
 /* Sections */
 section.band { padding-block: 120px; border-top: 1px solid var(--line); }
@@ -172,33 +158,12 @@ footer a { color: var(--muted); }
       <p class="reassure">No ads. No credit card. Try it without an account.</p>
     </div>
 
-    <aside class="label" aria-label="Nutrition Facts for Simply Nutrition">
-      <h2>Nutrition Facts</h2>
-      <div class="serv">
-        <div>1 app per person</div>
-        <div class="big"><span>Serving size</span><span>Everything you eat</span></div>
-      </div>
-      <div class="bar-xl"></div>
-      <div class="amount">Amount per day</div>
-      <div class="cal"><span>Targets tracked</span><span>29</span></div>
-      <div class="bar-m"></div>
-      <div class="r first"><span><b>Calories &amp; macros</b> incl. fiber</span><b>5</b></div>
-      <div class="r"><span><b>Vitamins</b></span><b>13</b></div>
-      <div class="r"><span><b>Minerals</b></span><b>9</b></div>
-      <div class="r"><span><b>Limits</b> sodium, saturated fat</span><b>2</b></div>
-      <div class="bar-m"></div>
-      <div class="r dvh first">% Daily Value*</div>
-      <div class="r"><span><b>Ads</b> 0g</span><b>0%</b></div>
-      <div class="r"><span><b>Monthly cost</b> $0</span><b>0%</b></div>
-      <div class="r"><span><b>Paywalled features</b> 0g</span><b>0%</b></div>
-      <div class="r"><span><b>Your data sold</b> 0g</span><b>0%</b></div>
-      <div class="bar-m"></div>
-      <div class="r first"><span>Food data</span><span>USDA lab-analyzed</span></div>
-      <div class="r"><span>Foods built in</span><span>14,220</span></div>
-      <div class="r"><span>To log a meal</span><span>1 sentence</span></div>
-      <div class="bar-xl"></div>
-      <div class="foot">* The % Daily Value tells you how much a nutrient in a serving of food contributes to a daily diet. Simply Nutrition does that math for every meal you log, so you don't have to.</div>
-    </aside>
+    <figure class="hero-shot">
+      <picture>
+      <source media="(max-width: 600px)" srcset="/assets/landing/trends-phone.webp" width="1170" height="3018">
+      <img src="/assets/landing/trends.webp" srcset="/assets/landing/trends-1280.webp 1280w, /assets/landing/trends.webp 2560w" sizes="(max-width: 1240px) calc(100vw - 32px), 1200px" width="2560" height="2062" fetchpriority="high" alt="The Trends page in Macros only: macro targets met per day, average calories and protein, a target map of calories, protein, fat, carbs and fiber by day, a calories chart, plain-language insights and days on target">
+      </picture>
+    </figure>
   </div>
 </header>
 

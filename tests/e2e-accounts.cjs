@@ -275,6 +275,16 @@ async function until(fn, ms = 8000) {
     await until(async () => (await st(p1)).user && (await st(p1)).user.email === A);
   });
 
+  await step('landing-page links open the sign-in and sign-up forms', async () => {
+    const { page: d } = await device('landing');
+    await d.goto(url + 'app/#signup'); // already on /app/: same-page link
+    await d.waitForSelector('form[data-form="signup"]');
+    await d.click('[data-action="close-sheet"]');
+    await d.goto('about:blank');
+    await d.goto(url + 'app/#signin');
+    await d.waitForSelector('form[data-form="signin"]');
+  });
+
   await step('no console errors', async () => { assert.deepEqual(errors, []); });
 
   await browser.close();

@@ -1160,11 +1160,14 @@
     renderAccountButton();
     render();
     // Links from the landing page: /app/#signin and /app/#signup open the matching form.
-    const m = window.location.hash.match(/^#(signin|signup)$/);
-    if (m) {
+    const openFromHash = (delay) => {
+      const m = window.location.hash.match(/^#(signin|signup)$/);
+      if (!m) return;
       history.replaceState(null, '', window.location.pathname + window.location.search);
-      setTimeout(() => { if (!S.user) openSheet({ type: 'auth', mode: m[1], error: '', busy: false }); }, 300);
-    }
+      setTimeout(() => { if (!S.user) openSheet({ type: 'auth', mode: m[1], error: '', busy: false }); }, delay);
+    };
+    openFromHash(300);
+    window.addEventListener('hashchange', () => openFromHash(0));
   }
 
   async function handleAuth(event, session) {

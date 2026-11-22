@@ -304,6 +304,15 @@ async function until(fn, ms = 8000) {
     await d.waitForSelector('form[data-form="signin"]');
   });
 
+  await step('signed in, the Home button opens the landing page instead of bouncing back to the app', async () => {
+    await p1.click('.home-link');
+    await p1.waitForSelector('.hero');
+    assert.match(new URL(p1.url()).search, /home/);
+    await p1.click('a.btn.primary[href="/app/"] >> nth=0');
+    await p1.waitForSelector('.score');
+    assert.equal((await st(p1)).user.email, A, 'still signed in');
+  });
+
   await step('no console errors', async () => { assert.deepEqual(errors, []); });
 
   await browser.close();

@@ -51,7 +51,7 @@ npm run test:e2e
 npm run test:accounts
 ```
 
-`npm test` runs 51 unit tests for the core logic and the sync engine (`node --test`). `npm run test:e2e` runs 37 browser checks of guest mode with Playwright: logging, editing, recipes, custom foods, online search (mocked), trends, export and import, reload persistence, phone layout and dark mode. `npm run test:accounts` runs 19 browser checks of accounts against a fake Supabase: sign-up, email confirmation, guest import, two-device sync, offline recovery, isolation between users, sign-out, password reset and account deletion. Both browser suites send the same Content-Security-Policy as the live site.
+`npm test` runs 51 unit tests for the core logic and the sync engine (`node --test`). `npm run test:e2e` runs 37 browser checks of guest mode with Playwright: logging, editing, recipes, custom foods, online search (mocked), trends, export and import, reload persistence, phone layout and dark mode. `npm run test:accounts` runs 20 browser checks of accounts against a fake Supabase: sign-up, email confirmation, guest import, two-device sync, offline recovery, isolation between users, sign-out, password reset and account deletion. Both browser suites send the same Content-Security-Policy as the live site.
 
 ## How it works
 

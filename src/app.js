@@ -554,7 +554,21 @@
   // ---------------------------------------------------------------------------
   // Sheets: add food, nutrient detail, custom food, recipe
   // ---------------------------------------------------------------------------
-  function openSheet(sheet) { S.sheet = sheet; renderSheet(); setTimeout(() => { const f = document.querySelector('#sheet-root [data-autofocus]'); if (f) f.focus(); }, 30); }
+  function openSheet(sheet) {
+    S.sheet = sheet;
+    renderSheet();
+    setTimeout(() => {
+      // Put the cursor in the sheet's first field, unless that sheet has closed or the person already
+      // tapped into a field: on a slow phone this can run late, and stealing focus would send their
+      // typing into the wrong box (e.g. the calories ending up in the food's name).
+      if (S.sheet !== sheet) return;
+      const root = $('#sheet-root');
+      const active = document.activeElement;
+      if (active && root.contains(active) && active.matches('input, textarea, select')) return;
+      const f = root.querySelector('[data-autofocus]');
+      if (f) f.focus();
+    }, 30);
+  }
   function closeSheet() {
     if (S.sheet && S.sheet.type === 'welcome' && !S.data.onboarded) { S.data.onboarded = true; save(); S.dirtyRender = true; } // closing the welcome = skip it
     S.sheet = null;

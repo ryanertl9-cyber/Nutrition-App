@@ -213,6 +213,21 @@ async function step(name, fn) {
     assert.equal(e.grams, 60);
   });
 
+  await step('opening a sheet never pulls the cursor out of a field you already tapped', async () => {
+    // Regression: the delayed autofocus used to fire after a quick tap on a slow device and send
+    // typing into the first field (the calories ended up in the food's name).
+    await page.click('[data-tab="foods"]');
+    const focused = await page.evaluate(async () => {
+      document.querySelector('[data-action="new-custom"]').click();
+      const kcal = document.querySelector('[data-cf="kcal"]');
+      kcal.focus(); // the person taps Calories before the sheet's autofocus runs
+      await new Promise((r) => setTimeout(r, 150));
+      return document.activeElement && document.activeElement.dataset.cf;
+    });
+    assert.equal(focused, 'kcal');
+    await page.click('[data-action="close-sheet"]');
+  });
+
   await step('a custom food from a label can be created and logged', async () => {
     await page.click('[data-tab="foods"]');
     await page.click('[data-action="new-custom"]');

@@ -112,6 +112,29 @@ async function step(name, fn) {
     await ios.close();
   });
 
+  await step('installed on a phone, content starts below the status bar and stays clear when scrolling', async () => {
+    const phone = await browser.newContext(Object.assign({}, devices['iPhone 13'], { serviceWorkers: 'block' }));
+    await phone.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    const p = await phone.newPage();
+    await p.goto(url + 'app/');
+    await p.waitForSelector('.score');
+    // Simulate the iPhone status bar area that a home-screen app runs under (Chromium has no notch to emulate).
+    await p.addStyleTag({ content: ':root { --safe-top: 47px !important; }' });
+    const layout = () => p.evaluate(() => {
+      const bar = document.querySelector('.appbar').getBoundingClientRect();
+      const first = document.querySelector('#main').firstElementChild.getBoundingClientRect();
+      return { barTop: bar.top, barBottom: bar.bottom, firstTop: first.top };
+    });
+    let l = await layout();
+    assert.equal(l.barTop, 47, 'menu bar starts below the status bar');
+    assert.ok(l.firstTop >= l.barBottom, `page content (${l.firstTop}) starts below the menu bar (${l.barBottom})`);
+    await p.evaluate(() => window.scrollTo(0, 800));
+    l = await layout();
+    assert.equal(l.barTop, 47, 'menu bar stays below the status bar when scrolled');
+    if (process.env.SHOTS_DIR) await p.screenshot({ path: process.env.SHOTS_DIR + '/safe-top.png' });
+    await phone.close();
+  });
+
   await step('no page errors', async () => assert.deepEqual(errors, []));
   await browser.close();
   srv.close();

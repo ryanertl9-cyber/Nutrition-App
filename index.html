@@ -34,6 +34,7 @@
   --label-paper: #ffffff; --label-ink: #111111;
   --display: "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --body: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -53,8 +54,9 @@ h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.05; text-wra
 @media (prefers-reduced-motion: no-preference) { .btn { transition: background .2s ease, transform .2s ease; } .btn:active { transform: scale(.98); } }
 
 /* Nav */
-body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
-nav.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: rgb(0 0 0 / 72%); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--line); }
+body { padding-top: var(--safe-top); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: var(--safe-top); z-index: 10; background: var(--bg); }
+nav.top { position: sticky; top: var(--safe-top); z-index: 5; background: rgb(0 0 0 / 72%); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--line); }
 nav.top .wrap { display: flex; align-items: center; gap: 26px; padding-block: 12px; }
 .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; color: var(--ink); text-decoration: none !important; }
 .brand b { font: 600 .9rem/1 var(--body); letter-spacing: .28em; text-transform: uppercase; }

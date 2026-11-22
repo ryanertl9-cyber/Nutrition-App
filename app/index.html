@@ -14,6 +14,11 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Simply Nutrition">
+<style>
+/* Hosted app only (the claude.ai viewer reserves this space itself): when installed on a phone the page runs
+   under the status bar (clock, battery), so start the content below it. */
+body { padding-top: var(--safe-top); }
+</style>
 <!-- ARTIFACT-START -->
 <title>Simply Nutrition</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -34,6 +39,7 @@
   --display: "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --body: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --radius: 18px; --shadow: 0 20px 60px rgb(0 0 0 / 50%);
+  --safe-top: env(safe-area-inset-top, 0px); /* height of the phone's status bar area, 0 in a normal browser tab */
   color-scheme: dark;
 }
 html { background: var(--bg); }
@@ -54,8 +60,8 @@ h3 { font-size: .95rem; font-weight: 750; }
 [hidden] { display: none !important; }
 
 /* App bar */
-body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--surface); }
-.appbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: var(--safe-top); z-index: 30; background: var(--bg); }
+.appbar { position: sticky; top: var(--safe-top); z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
 .appbar .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding-block: 10px 0; }
 .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
 /* Wordmark matches the landing page: Inter, medium weight, widely tracked capitals. */
@@ -106,7 +112,7 @@ main { padding-block: 18px 64px; }
 /* Today layout */
 .today { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 18px; align-items: start; }
 .today .col-log { order: 1; }
-.today .col-score { order: 2; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 100px); }
+.today .col-score { order: 2; position: sticky; top: calc(var(--safe-top) + 100px); }
 @media (max-width: 900px) {
   .today { grid-template-columns: minmax(0, 1fr); }
   .today .col-score { order: 0; position: static; }
@@ -272,7 +278,16 @@ h3 { font-weight: 650; }
 .eyebrow { font: 600 .68rem/1.2 var(--body); letter-spacing: .2em; }
 a { color: var(--accent); }
 body::before { background: var(--bg); }
-.appbar { background: rgb(0 0 0 / 72%); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom-color: var(--line); }
+.appbar { background: #000000; border-bottom-color: var(--line); }
+/* Phones: Sign in sits next to the logo, so the bar takes less of the screen. */
+@media (max-width: 600px) {
+  .appbar .wrap { padding-block: 8px 0; row-gap: 4px; }
+  .brand { order: 0; }
+  .account-slot { order: 1; }
+  .datenav { order: 2; flex-basis: 100%; justify-content: space-between; }
+  .tabs { order: 3; }
+  .tab { padding: 11px 12px 10px; }
+}
 .tab { font: 600 .72rem/1 var(--body); letter-spacing: .16em; text-transform: uppercase; padding: 15px 14px 13px; border-bottom-width: 2px; }
 .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
 .datenav .label { font-weight: 600; }

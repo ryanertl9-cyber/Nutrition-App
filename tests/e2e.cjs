@@ -460,11 +460,11 @@ async function step(name, fn) {
     const b = await p2.locator('.quick').boundingBox();
     assert.ok(a.y < b.y);
   });
-  await step('app uses the black theme with a white scoreboard panel', async () => {
+  await step('app uses the black theme with a cream scoreboard panel', async () => {
     const bg = await p2.evaluate(() => getComputedStyle(document.body).backgroundColor);
     assert.equal(bg, 'rgb(0, 0, 0)');
     const panel = await p2.evaluate(() => getComputedStyle(document.querySelector('.score')).backgroundColor);
-    assert.equal(panel, 'rgb(255, 255, 255)');
+    assert.equal(panel, 'rgb(243, 237, 225)', 'eggshell cream, not bright white');
   });
   await step('phone: add sheet fits the screen', async () => {
     await p2.click('[data-action="open-add"][data-meal="dinner"]');

@@ -323,18 +323,18 @@ body::before { background: var(--bg); }
 .preview-grid .p { border-radius: 14px; }
 .toast { background: var(--white); color: #000; border-radius: 999px; }
 
-/* The daily scoreboard is a white Nutrition Facts panel on black, like the label on the landing page. */
+/* The daily scoreboard is a warm cream Nutrition Facts panel on black (eggshell, not bright white). */
 .score {
-  --surface: #ffffff; --sunken: #f2f2f5; --ink: #111111; --muted: #5f5f66; --white: #111111;
-  --line: #d9d9de; --line-strong: #c7c7cc; --track: #e8e8ed; --info: #8e8e93;
+  --surface: #f3ede1; --sunken: #e9e2d3; --ink: #1a1712; --muted: #5e584d; --white: #1a1712;
+  --line: #d9d0be; --line-strong: #c8bda7; --track: #e1d9c8; --info: #8c8578;
   --met: #1c8a4a; --near: #b7790a; --low: #d4461c; --over: #d1245f;
   --met-soft: #dcf1e4; --near-soft: #f8ecd2; --low-soft: #fbe2d8; --over-soft: #fbdde7;
-  background: #ffffff; color: #111111; border: 2px solid #111111; border-radius: 6px; color-scheme: light;
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 6%), 0 30px 90px rgb(167 139 250 / 16%);
+  background: #f3ede1; color: #1a1712; border: 2px solid #1a1712; border-radius: 6px; color-scheme: light;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 4%), 0 24px 70px rgb(167 139 250 / 9%);
 }
 .score .score-title h2, .score .bigcount { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-stretch: normal; letter-spacing: -.02em; }
-.score .seg button[aria-pressed="true"] { background: #111111; color: #ffffff; }
-.score .nrow:hover { background: #f2f2f5; }
+.score .seg button[aria-pressed="true"] { background: #1a1712; color: #f3ede1; }
+.score .nrow:hover { background: #e9e2d3; }
 
 /* Fold: "Macros only" collapses the micronutrient parts and enlarges the macros. */
 .fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .4s ease, opacity .3s ease; }

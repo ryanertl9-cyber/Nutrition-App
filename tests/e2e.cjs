@@ -90,7 +90,7 @@ async function step(name, fn) {
     const es = await todayEntries();
     assert.equal(es.length, 3);
     const names = es.map((e) => e.name);
-    assert.match(names[0], /^Egg, whole/);
+    assert.match(names[0], /egg/i);
     assert.match(names[1], /^Oatmeal/);
     assert.match(names[2], /^Banana/);
     assert.ok(es.every((e) => e.meal === 'breakfast'));
@@ -133,7 +133,8 @@ async function step(name, fn) {
     assert.match(await page.textContent('#add-results .result >> nth=0'), /versions/);
     await page.click('#add-results [data-action="pick"] >> nth=0');
     const opts = await page.locator('#pp-version option').count();
-    assert.ok(opts > 3);
+    assert.ok(opts >= 2, 'lean only / lean and fat versions');
+    assert.match(await page.textContent('#pp-version'), /Lean only/);
     const before = await page.textContent('#pp-preview');
     const second = await page.getAttribute('#pp-version option >> nth=1', 'value');
     await page.selectOption('#pp-version', second);

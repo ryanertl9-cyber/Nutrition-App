@@ -28,12 +28,12 @@ test('missing lab values stay null instead of becoming zero', () => {
 
 test('search puts the everyday food first', () => {
   const top = (q) => db.search(q, { limit: 1 })[0].name;
-  assert.equal(top('banana'), 'Banana, raw');
-  assert.equal(top('eggs'), 'Egg, whole, boiled or poached');
+  assert.equal(top('banana'), 'Banana');
+  assert.equal(top('eggs'), 'Boiled or poached egg');
   assert.match(top('greek yogurt'), /^Yogurt, Greek/);
   assert.match(top('chicken breast'), /^Chicken breast, grilled/);
   assert.equal(top('coffee'), 'Coffee, brewed');
-  assert.equal(top('apple'), 'Apple, raw');
+  assert.equal(top('apple'), 'Apple');
   assert.equal(top('burger'), 'Hamburger, on white bun, 1 medium patty');
   assert.equal(db.search('zzzz').length, 0);
 });
@@ -110,14 +110,16 @@ test('parseAmount handles digits, fractions, unicode and words', () => {
 test('parseMeal turns a sentence into foods and grams', () => {
   const items = NL.parseMeal('2 eggs, 1 cup oatmeal and a banana; 8 oz salmon + 2 tbsp peanut butter, 100g rice', db);
   const got = items.map((i) => [i.food && i.food.name, i.grams]);
-  assert.deepEqual(got, [
-    ['Egg, whole, boiled or poached', 100], // 2 × 1 egg (50 g)
-    ['Oatmeal', 240], // 1 cup
-    ['Banana, raw', 126], // 1 banana
-    ['Fish, salmon, baked or broiled', 226.8], // 8 oz
-    ['Peanut butter', 30], // 2 tbsp
-    ['Rice, white, cooked, no added fat', 100],
-  ]);
+  const expected = [
+    [/^Boiled or poached egg$/, 100], // 2 × 1 egg (50 g)
+    [/^Oatmeal/, 240], // 1 cup
+    [/^Banana$/, 126], // 1 banana
+    [/^Fish, salmon/, 226.8], // 8 oz
+    [/^Peanut butter$/, 30], // 2 tbsp
+    [/^Rice, white, cooked/, 100],
+  ];
+  assert.equal(got.length, expected.length);
+  expected.forEach(([re, g], k) => { assert.match(got[k][0], re); assert.equal(got[k][1], g); });
 });
 
 test('parseMeal reports words it cannot match', () => {
@@ -228,13 +230,13 @@ test('sample data is deterministic and leaves today in progress', () => {
 
 test('everyday steak names find the right beef cut', () => {
   const top = (q) => db.search(q, { limit: 1 })[0];
-  assert.match(top('ny strip').name, /^Beef, steak, strip/);
-  assert.match(top('new york strip steak').name, /^Beef, steak, strip/);
-  assert.match(top('filet mignon').name, /tenderloin/);
-  assert.match(top('ribeye').name, /^Beef, steak, ribeye/);
+  assert.match(top('ny strip').name, /^Strip steak/);
+  assert.match(top('new york strip steak').name, /^Strip steak/);
+  assert.match(top('filet mignon').name, /filet mignon/i);
+  assert.match(top('ribeye').name, /^Ribeye steak/);
   assert.match(top('t-bone').name, /T-bone/i);
-  assert.ok(db.versionsOf(top('ribeye')).some((v) => v.db === 'sr28'), 'detailed USDA cuts are versions of the everyday ribeye');
-  assert.match(top('sirloin').name, /^Beef/);
+  assert.ok(db.search('ribeye', { limit: 10 }).some((f) => f.db === 'sr28'), 'detailed USDA ribeye cuts are still findable');
+  assert.match(top('sirloin').name, /^Sirloin steak/);
   assert.match(top('pork sirloin').name, /^Pork/, 'naming another animal keeps it');
   assert.match(top('oj').name, /^Orange juice/);
 });
@@ -243,10 +245,31 @@ test('versions of one food collapse into a single result', () => {
   const res = db.search('ribeye', { limit: 30 });
   const families = res.map((f) => f.family);
   assert.equal(new Set(families).size, families.length, 'no family appears twice');
-  const ribeye = res[0];
-  const versions = db.versionsOf(ribeye);
-  assert.ok(versions.length > 10, 'grades, trims and cooking methods are versions');
-  assert.ok(versions.every((v) => v.family === ribeye.family));
+  const detail = res.find((f) => f.db === 'sr28' && /rib eye steak/i.test(f.familyName));
+  const versions = db.versionsOf(detail);
+  assert.ok(versions.length > 10, 'grades, trims and cooking methods are versions of the USDA cut');
+  assert.ok(versions.every((v) => v.family === detail.family));
+});
+
+test('everyday versions are preparations of the same food, not different dishes', () => {
+  const fried = db.search('fried egg', { limit: 1 })[0];
+  assert.equal(fried.familyName, 'Fried egg');
+  const vs = db.versionsOf(fried).map((v) => v.version);
+  assert.ok(vs.includes('with butter') && vs.includes('with oil') && vs.includes('no added fat'));
+  assert.ok(db.versionsOf(fried).every((v) => v.familyName === 'Fried egg'), 'egg salad, omelets etc. are separate foods');
+  const scrambled = db.search('scrambled eggs', { limit: 3 }).map((f) => f.familyName);
+  assert.ok(scrambled.includes('Scrambled eggs or omelet') && scrambled.includes('Scrambled eggs or omelet, with cheese'));
+  const water = db.search('water', { limit: 1 })[0];
+  assert.ok(db.versionsOf(water).length < 5, 'drinks made mostly of water are not versions of water');
+});
+
+test('search results have no duplicate names and use plain wording', () => {
+  for (const q of ['egg', 'steak', 'coffee', 'milk', 'chicken', 'potato', 'rice']) {
+    const names = db.search(q, { limit: 20 }).filter((f) => f.db === 'fndds').map((f) => f.familyName);
+    assert.equal(new Set(names).size, names.length, q);
+    for (const n of names) assert.doesNotMatch(n, /\bNFS\b|\bNS as to\b/, q);
+  }
+  assert.equal(db.search('french fries', { limit: 1 })[0].familyName, 'French fries');
 });
 
 test('meat defaults to a cooked version', () => {
@@ -266,7 +289,7 @@ test('broad words offer "which kind?" choices that all find food', () => {
 
 test('typos are corrected, nonsense is not', () => {
   assert.match(db.search('brocoli', { limit: 1 })[0].name, /^Broccoli/);
-  assert.equal(db.search('bannana', { limit: 1 })[0].name, 'Banana, raw');
+  assert.equal(db.search('bannana', { limit: 1 })[0].name, 'Banana');
   assert.match(db.search('chiken breast', { limit: 1 })[0].name, /^Chicken breast/);
   assert.equal(db.search('qwertyfood').length, 0);
 });

@@ -345,6 +345,11 @@ body::before { background: var(--bg); }
 @media (max-width: 520px) { .install { flex-wrap: wrap; } .install .row { margin-left: 0; } }
 .updatebar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; gap: 12px; align-items: center; background: var(--white); color: #000; border-radius: 999px; padding: 8px 8px 8px 18px; font-weight: 600; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
 .updatebar .btn { background: #000; color: #fff; border-color: #000; }
+
+/* Database-style USDA entries, collapsed under everyday results */
+.more-detail { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+.more-detail summary { cursor: pointer; color: var(--muted); font-weight: 600; font-size: .9rem; }
+.more-detail[open] summary { color: var(--ink); }
 </style>
 <!-- ARTIFACT-HEAD-END -->
 </head>

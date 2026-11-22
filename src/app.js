@@ -577,7 +577,7 @@
       const p = (f.portions && f.portions[0]) || [100, '100 g'];
       const n = f.src === 'sr' ? db.versionsOf(f).length : 1;
       const title = f.src === 'sr' ? f.familyName : f.name;
-      const detail = f.src === 'sr' && f.version ? `<span class="version">${esc(versionLabel(f.version))}</span>` : '';
+      const detail = f.src === 'sr' && f.version && db.versionsOf(f).length > 1 ? `<span class="version">${esc(f.db === 'fndds' ? f.version.charAt(0).toUpperCase() + f.version.slice(1) : versionLabel(f.version))}</span>` : '';
       return `<li class="result"><button class="pick" data-action="pick" data-src="${f.src}" data-fid="${f.id}"><b>${esc(title)}</b>${detail}<span class="meta">${foodTag(f)} ${esc(p[1])} · ${fmt(kcalOf(f, p[0]))} kcal${n > 1 ? ` · <span class="versions">${n} versions</span>` : ''}</span></button></li>`;
     };
     const kindsRow = kinds ? `<div class="kinds" role="group" aria-label="Which kind?"><span class="eyebrow">Which kind?</span>${kinds.map(([label, kq]) => `<button class="chip" data-action="kind" data-q="${esc(kq)}">${esc(label)}</button>`).join('')}</div>` : '';
@@ -589,7 +589,7 @@
       else if (o.status === 'done') online = o.results.length ? `<div class="eyebrow" style="margin-top:14px">USDA FoodData Central (online)</div><ul class="results">${o.results.map((f, i) => `<li class="result"><button class="pick" data-action="pick-online" data-i="${i}"><b>${esc(f.name)}</b><span class="meta"><span class="tag mine">${esc(f.dataType || 'USDA')}</span> per 100 g · ${fmt(f.per100[0])} kcal</span></button></li>`).join('')}</ul>` : `<p class="empty">No online results for “${esc(q)}”.</p>`;
     }
     return `${kindsRow}${mine.length ? `<div class="eyebrow" style="margin-top:6px">My foods</div><ul class="results">${mine.map(row).join('')}</ul>` : ''}
-      ${res.length ? `<ul class="results">${res.map(row).join('')}</ul>` : `<p class="empty">No built-in match for “${esc(q)}”. Try a simpler word (“yogurt” instead of “strawberry yogurt cup”) or search online.</p>`}
+      ${resultListHTML(res, row, q)}
       <div class="row" style="margin-top:12px"><button class="btn small" data-action="search-online">Search USDA online for “${esc(q)}”</button><button class="btn small ghost" data-action="new-custom-from-search">Create a custom food</button></div>
       ${online}`;
   }
@@ -610,8 +610,17 @@
     if (f.src !== 'sr') return '';
     const vs = db.versionsOf(f);
     if (vs.length < 2) return f.version ? `<p class="small muted" style="margin:0">${esc(versionLabel(f.version))}</p>` : '';
-    const label = (v) => (v.db === 'fndds' ? v.name : `USDA detail: ${versionLabel(v.version) || 'standard'}`);
+    const label = (v) => (v.db === 'fndds' ? (v.version ? v.version.charAt(0).toUpperCase() + v.version.slice(1) : 'Standard') : versionLabel(v.version) || 'Standard');
     return `<label class="field"><span>Version (${vs.length})</span><select class="input" id="pp-version">${vs.map((v) => `<option value="${v.id}" ${v.id === f.id ? 'selected' : ''}>${esc(label(v))} · ${fmt(v.per100[0])} kcal/100 g</option>`).join('')}</select></label>`;
+  }
+  /** Everyday foods first; USDA's database-style reference entries tucked into a collapsed section when there are everyday matches. */
+  function resultListHTML(res, row, q) {
+    if (!res.length) return `<p class="empty">No built-in match for “${esc(q)}”. Try a simpler word (“yogurt” instead of “strawberry yogurt cup”) or search online.</p>`;
+    const everyday = res.filter((f) => f.db !== 'sr28');
+    const detail = res.filter((f) => f.db === 'sr28');
+    if (!everyday.length || !detail.length) return `<ul class="results">${res.map(row).join('')}</ul>`;
+    return `<ul class="results">${everyday.map(row).join('')}</ul>
+      <details class="more-detail"><summary>More detailed USDA entries (${detail.length})</summary><p class="small muted" style="margin:6px 0 0">Lab reference entries with exact cuts, grades and preparations. Useful when you know precisely what you ate.</p><ul class="results">${detail.map(row).join('')}</ul></details>`;
   }
   function portionPaneHTML() {
     const sel = S.sheet.selected;
